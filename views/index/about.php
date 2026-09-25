@@ -35,7 +35,7 @@ $ddpm = flood_ddpm_phone();
         <p class="ab-org"><i class="fa fa-hospital-o" aria-hidden="true"></i> <?= h(DEPARTMENT_NAME) ?></p>
         <div class="ab-hero-btns" data-html2canvas-ignore>
             <a href="<?= URL ?>" class="ab-btn ab-btn-primary"><i class="fa fa-map-o" aria-hidden="true"></i> เปิดแผนที่สถานการณ์</a>
-            <button type="button" class="ab-btn ab-btn-ghost" id="abSaveImg"><i class="fa fa-download" aria-hidden="true"></i> ดาวน์โหลดเป็นรูปภาพ</button>
+            <button type="button" class="ab-btn ab-btn-ghost" id="abSaveImg" title="รูปขนาดกระดาษ A4 แนวตั้ง (300 dpi) พร้อมพิมพ์"><i class="fa fa-download" aria-hidden="true"></i> ดาวน์โหลดเป็นรูปภาพ A4</button>
         </div>
         <blockquote class="ab-quote">“ข้อมูลที่ถูกต้อง ไปถึงคนที่ต้องใช้ ทันเวลา — คือความปลอดภัยของทุกคน”</blockquote>
     </section>
@@ -158,24 +158,267 @@ $ddpm = flood_ddpm_phone();
 </main>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
 <script>
+/*
+ * ดาวน์โหลดเป็นรูปภาพ A4 (แนวตั้ง 2480 × 3508 px = 300 dpi พร้อมพิมพ์)
+ * คัดลอกเนื้อหาหน้านี้ไปจัดใหม่นอกจอ: หัว + ขั้นตอน + ตัวเลข เต็มแถว · หัวข้ออื่นแบ่ง 3 คอลัมน์ให้สูงใกล้กัน
+ * แล้วหาความกว้างที่แคบที่สุด (ตัวหนังสือใหญ่ที่สุด) ที่ทั้งหมดยังพอดีสัดส่วน A4 · ท้ายกระดาษมีลิงก์ + QR เปิดแผนที่
+ */
 (function () {
-    var b = document.getElementById('abSaveImg');
-    if (!b) return;
-    b.addEventListener('click', function () {
-        if (!window.html2canvas) { alert('กำลังโหลด กรุณาลองอีกครั้ง'); return; }
-        var old = b.innerHTML;
-        b.disabled = true; b.innerHTML = '<i class="fa fa-spinner fa-spin"></i> กำลังสร้างรูป...';
-        window.html2canvas(document.getElementById('abCapture'), { scale: 2, backgroundColor: '#eef6ff', useCORS: true })
-            .then(function (c) {
-                var a = document.createElement('a');
-                a.download = 'SK-Flood-about.png';
-                a.href = c.toDataURL('image/png');
-                document.body.appendChild(a); a.click(); a.remove();
-            })
-            .catch(function () { alert('สร้างรูปไม่สำเร็จ'); })
-            .then(function () { b.disabled = false; b.innerHTML = old; });
+    var btn = document.getElementById('abSaveImg');
+    if (!btn) {
+        return;
+    }
+    var A4 = 297 / 210;                 // สูง ÷ กว้าง
+    var OUT_W = 2480;                   // A4 ที่ 300 dpi = 2480 × 3508 px
+    var OUT_H = 3508;
+    var W_MIN = 760;
+    var W_MAX = 1500;
+    var COLS = 3;                       // คอลัมน์ของหัวข้อด้านล่าง (balance() รองรับ 3)
+    var GAP = 14;                       // ระยะห่างระหว่างหัวข้อในคอลัมน์ — ตรงกับ .ab-a4-col { gap }
+    var BG = '#eef6ff';
+    var SITE = <?= flood_js(URL) ?>;
+    var ASOF = <?= flood_js(flood_thai_date(time())) ?>;
+    var ORG = <?= flood_js(SHORT_NAME_SYSTEM . ' by SCPH · ' . DEPARTMENT_NAME) ?>;
+
+    function say(msg) {
+        if (window.Flood && Flood.toast) {
+            Flood.toast(msg, 'danger');
+        } else {
+            window.alert(msg);
+        }
+    }
+
+    function el(tag, cls, html) {
+        var e = document.createElement(tag);
+        if (cls) {
+            e.className = cls;
+        }
+        if (html !== undefined) {
+            e.innerHTML = html;
+        }
+        return e;
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
+    /** สร้างหน้า A4 นอกจอจากเนื้อหาจริงของหน้านี้ */
+    function build() {
+        var src = document.getElementById('abCapture');
+        var host = el('div', 'ab-a4-host');
+        host.setAttribute('aria-hidden', 'true');
+        var page = el('div', 'ab-a4');
+        var body = el('div', 'ab-a4-body');
+        var clone = src.cloneNode(true);
+        [].slice.call(clone.querySelectorAll('[data-html2canvas-ignore], script')).forEach(function (n) {
+            n.parentNode.removeChild(n);
+        });
+        while (clone.firstChild) {
+            body.appendChild(clone.firstChild);
+        }
+        // หัวข้อที่เป็นการ์ด (ยกเว้นขั้นตอนการทำงาน) ไปอยู่ในคอลัมน์ · หัวข้อที่มีหลายการ์ดย่อย (จุดเด่นฯ)
+        // แยกการ์ดที่ 2 เป็นต้นไปเป็นชิ้นต่อเนื่อง ให้กระจายไปคอลัมน์อื่นได้
+        var cols = el('div', 'ab-a4-cols');
+        var colList = [];
+        for (var c = 0; c < COLS; c++) {
+            colList.push(cols.appendChild(el('div', 'ab-a4-col')));
+        }
+        var secs = [];
+        [].slice.call(body.children).forEach(function (n) {
+            if (!n.classList || !n.classList.contains('ab-sec') || n.querySelector('.ab-steps')) {
+                return;
+            }
+            secs.push(n);
+            var cards = [].slice.call(n.querySelectorAll('.ab-grid2 > .ab-card'));
+            cards.slice(1).forEach(function (card) {
+                var more = el('section', 'ab-sec ab-a4-cont');
+                more.appendChild(card);
+                secs.push(more);
+            });
+        });
+        if (secs.length) {
+            body.insertBefore(cols, secs[0]);   // ตำแหน่งเดิมของหัวข้อแรก (ต่อจากแถบตัวเลข)
+            secs.forEach(function (n) { colList[0].appendChild(n); });
+        }
+        var close = body.querySelector('.ab-close');
+        if (close) {
+            body.appendChild(close);   // ปิดท้ายเต็มแถวต่อจากคอลัมน์
+        }
+        var shortUrl = SITE.replace(/^https?:\/\//, '').replace(/\/$/, '');
+        var foot = el('div', 'ab-a4-foot',
+            '<div class="ab-a4-foot-l"><b>' + escHtml(ORG) + '</b>'
+            + '<span class="ab-a4-url">เปิดแผนที่สถานการณ์น้ำ <b>' + escHtml(shortUrl) + '</b></span>'
+            + '<small>ข้อมูล ณ ' + escHtml(ASOF) + ' · Developed by Komsan Asa</small></div>'
+            + (window.qrcode ? '<div class="ab-a4-qr"><small><b>สแกน QR</b>เปิดแผนที่</small><span class="ab-a4-qr-box"></span></div>' : ''));
+        page.appendChild(body);
+        page.appendChild(foot);
+        host.appendChild(page);
+        document.body.appendChild(host);
+        return { host: host, page: page, cols: colList, secs: secs };
+    }
+
+    /** แบ่งหัวข้อลงคอลัมน์ตามลำดับเดิม (อ่านบนลงล่าง ซ้ายไปขวา) ให้คอลัมน์ที่สูงที่สุดเตี้ยที่สุด */
+    function balance(a) {
+        a.secs.forEach(function (n) { a.cols[0].appendChild(n); });
+        var hs = a.secs.map(function (n) { return n.offsetHeight + GAP; });
+        var n = hs.length;
+        var sum = function (from, to) {
+            var t = 0;
+            for (var i = from; i < to; i++) {
+                t += hs[i];
+            }
+            return t;
+        };
+        var best = [n, n];
+        var bestMax = Infinity;
+        for (var i = 0; i <= n; i++) {
+            for (var j = i; j <= n; j++) {
+                var m = Math.max(sum(0, i), sum(i, j), sum(j, n));
+                if (m < bestMax - 0.5) {
+                    bestMax = m;
+                    best = [i, j];
+                }
+            }
+        }
+        a.secs.forEach(function (sec, k) {
+            a.cols[k < best[0] ? 0 : (k < best[1] ? 1 : 2)].appendChild(sec);
+        });
+    }
+
+    function heightAt(a, w) {
+        a.page.style.width = w + 'px';
+        a.page.style.minHeight = '';
+        balance(a);
+        return a.page.offsetHeight;
+    }
+
+    /** ความกว้างที่แคบที่สุดที่เนื้อหาทั้งหมดยังพอดีสัดส่วน A4 */
+    function fit(a) {
+        var lo = W_MIN;
+        var hi = W_MAX;
+        if (heightAt(a, lo) <= lo * A4) {
+            return lo;
+        }
+        if (heightAt(a, hi) > hi * A4) {
+            return hi;   // ยาวเกิน — ย่อทั้งภาพลงให้พอดีตอนวาด
+        }
+        while (hi - lo > 4) {
+            var mid = Math.round((lo + hi) / 2);
+            if (heightAt(a, mid) <= mid * A4) {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        return hi;
+    }
+
+    /** QR ลิงก์แผนที่ — วาดลงรูปโดยตรง (คมชัดทุกขนาด) */
+    function drawQr(ctx, x, y, size) {
+        var qr = window.qrcode(0, 'M');
+        qr.addData(SITE);
+        qr.make();
+        var n = qr.getModuleCount();
+        var cell = Math.floor(size / (n + 2));
+        if (cell < 1) {
+            return;
+        }
+        var full = cell * (n + 2);
+        var ox = Math.round(x + (size - full) / 2);
+        var oy = Math.round(y + (size - full) / 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(ox, oy, full, full);
+        ctx.fillStyle = '#16324f';
+        for (var r = 0; r < n; r++) {
+            for (var c = 0; c < n; c++) {
+                if (qr.isDark(r, c)) {
+                    ctx.fillRect(ox + (c + 1) * cell, oy + (r + 1) * cell, cell, cell);
+                }
+            }
+        }
+    }
+
+    function save(canvas) {
+        var name = 'SK-Flood-A4.png';
+        var go = function (href, revoke) {
+            var a = document.createElement('a');
+            a.download = name;
+            a.href = href;
+            document.body.appendChild(a);
+            a.click();
+            a.parentNode.removeChild(a);
+            if (revoke) {
+                setTimeout(function () { URL.revokeObjectURL(href); }, 5000);
+            }
+        };
+        if (canvas.toBlob && window.URL && URL.createObjectURL) {
+            canvas.toBlob(function (blob) {
+                if (blob) {
+                    go(URL.createObjectURL(blob), true);
+                } else {
+                    go(canvas.toDataURL('image/png'), false);
+                }
+            }, 'image/png');
+        } else {
+            go(canvas.toDataURL('image/png'), false);
+        }
+    }
+
+    btn.addEventListener('click', function () {
+        if (!window.html2canvas) {
+            say('กำลังโหลดเครื่องมือสร้างรูป กรุณาลองอีกครั้งในอีกสักครู่');
+            return;
+        }
+        var old = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> กำลังจัดหน้า A4...';
+        var a = null;
+        var done = function () {
+            if (a && a.host.parentNode) {
+                a.host.parentNode.removeChild(a.host);
+            }
+            btn.disabled = false;
+            btn.innerHTML = old;
+        };
+        var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+        ready.then(function () {
+            a = build();
+            var w = fit(a);
+            heightAt(a, w);
+            a.page.style.minHeight = Math.ceil(w * A4) + 'px';   // เต็มหน้า A4 — แถบท้ายชิดขอบล่าง
+            var scale = OUT_W / w;
+            var pr = a.page.getBoundingClientRect();
+            var qEl = a.page.querySelector('.ab-a4-qr-box');
+            var qr = qEl ? qEl.getBoundingClientRect() : null;
+            return window.html2canvas(a.page, {
+                scale: scale, backgroundColor: BG, useCORS: true, logging: false,
+                windowWidth: Math.max(1280, w + 80)
+            }).then(function (c) {
+                var out = document.createElement('canvas');
+                out.width = OUT_W;
+                out.height = OUT_H;
+                var ctx = out.getContext('2d');
+                ctx.fillStyle = BG;
+                ctx.fillRect(0, 0, OUT_W, OUT_H);
+                var s = Math.min(OUT_W / c.width, OUT_H / c.height);
+                var dx = (OUT_W - c.width * s) / 2;
+                ctx.drawImage(c, dx, 0, c.width * s, c.height * s);
+                if (qr && window.qrcode) {
+                    try {
+                        drawQr(ctx, dx + (qr.left - pr.left) * scale * s, (qr.top - pr.top) * scale * s, qr.width * scale * s);
+                    } catch (e) { /* ไม่มี QR ก็ยังมีลิงก์เป็นตัวหนังสือ */ }
+                }
+                save(out);
+            });
+        }).catch(function () {
+            say('สร้างรูปไม่สำเร็จ กรุณาลองใหม่');
+        }).then(done, done);
     });
 })();
 </script>

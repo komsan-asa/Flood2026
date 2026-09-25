@@ -168,3 +168,108 @@ body.sk-about-body {
     .ab-nav, .ab-hero-btns { display: none; }
     body.sk-about-body { background: #fff; }
 }
+
+/* =====================================================================
+ * รูปดาวน์โหลดขนาด A4 แนวตั้ง — ปุ่ม "ดาวน์โหลดเป็นรูปภาพ A4"
+ * สคริปต์ท้าย about.php คัดลอกเนื้อหาหน้านี้มาจัดใหม่นอกจอ (.ab-a4-host) แล้วหาความกว้างที่ทำให้
+ * ทั้งหมดพอดีสัดส่วน A4 ก่อนแปลงเป็นรูป · ใช้ selector 2 ชั้น (.ab-a4 …) ให้ชนะ @media ของจอมือถือ
+ * ===================================================================== */
+.ab-a4-host { position: absolute; left: -30000px; top: 0; pointer-events: none; }
+.ab-a4 {
+    box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 38px 40px 32px;
+    background: linear-gradient(180deg, var(--sk-bg-2, #deedfc) 0%, var(--sk-bg, #eef6ff) 360px);
+    color: var(--sk-ink, #16324f); font-family: var(--sk-font, "Anuphan"), system-ui, sans-serif; font-size: 14px;
+}
+.ab-a4 .ab-a4-body { display: flex; flex-direction: column; gap: 14px; }
+.ab-a4 .ab-a4-body > * { margin: 0; }
+
+/* หัว: โลโก้ + ชื่อระบบด้านซ้าย · คำอธิบายด้านขวา · หน่วยงาน + คำคมแถวล่าง (เตี้ยกว่าแบบกลางจอ) */
+.ab-a4 .ab-hero {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.35fr); column-gap: 18px; row-gap: 2px;
+    align-items: center; text-align: left; padding: 22px 26px 18px; box-shadow: none;
+}
+.ab-a4 .ab-hero-mark { grid-column: 1; grid-row: 1 / span 3; width: 58px; height: 58px; border-radius: 17px; margin: 0; box-shadow: none; }
+.ab-a4 .ab-hero-mark svg { width: 32px; height: 32px; }
+.ab-a4 .ab-kicker { grid-column: 2; grid-row: 1; font-size: 12.5px; }
+.ab-a4 .ab-hero h1 { grid-column: 2; grid-row: 2; margin: 0; font-size: 33px; line-height: 1.2; white-space: nowrap; }
+.ab-a4 .ab-tag { grid-column: 2; grid-row: 3; margin: 0; font-size: 17px; }
+.ab-a4 .ab-lead { grid-column: 3; grid-row: 1 / span 3; max-width: none; margin: 0; font-size: 14px; line-height: 1.65; }
+.ab-a4 .ab-org { grid-column: 1 / span 2; grid-row: 4; margin: 12px 0 0; font-size: 13.5px; }
+.ab-a4 .ab-quote { grid-column: 3; grid-row: 4; margin: 12px 0 0; max-width: none; padding: 7px 12px; font-size: 13px; }
+
+/* การ์ดหัวข้อ */
+.ab-a4 .ab-sec { padding: 15px 17px; box-shadow: none; }
+.ab-a4 .ab-sec h2 { margin: 0 0 10px; font-size: 17px; gap: 8px; }
+.ab-a4 .ab-sec h2 .fa { width: 28px; height: 28px; border-radius: 9px; font-size: 14px; }
+
+/* ขั้นตอน: 5 ช่องเรียงแถวเดียวเสมอ (จอมือถือก็ตาม) */
+.ab-a4 .ab-steps { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.ab-a4 .ab-steps li { padding: 11px 12px; gap: 6px; border-radius: 14px; }
+.ab-a4 .ab-steps li > b { width: 28px; height: 28px; font-size: 14px; }
+.ab-a4 .ab-steps li:not(:last-child)::after { display: block; right: -11px; top: 14px; font-size: 18px; }
+.ab-a4 .ab-steps h3 { font-size: 14.5px; margin: 0; }
+.ab-a4 .ab-steps p { font-size: 12.5px; line-height: 1.5; }
+
+/* ตัวเลข */
+.ab-a4 .ab-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ab-a4 .ab-stats > div { padding: 10px 8px 11px; box-shadow: none; border-radius: 16px; }
+.ab-a4 .ab-stats b { font-size: 32px; }
+.ab-a4 .ab-stats span { font-size: 13.5px; }
+.ab-a4 .ab-live { margin-top: -4px; padding: 7px 14px; font-size: 13px; border-radius: 999px; }
+
+/* สองคอลัมน์ (สคริปต์แบ่งหัวข้อให้สูงเท่า ๆ กัน) */
+.ab-a4 .ab-a4-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.ab-a4 .ab-a4-col { display: flex; flex-direction: column; gap: 14px; }
+.ab-a4 .ab-a4-col > * { margin: 0; }
+.ab-a4 .ab-grid2 { grid-template-columns: 1fr; gap: 10px; }
+.ab-a4 .ab-card { padding: 11px 14px; border-radius: 14px; }
+.ab-a4 .ab-a4-cont { padding-top: 12px; }   /* การ์ดต่อจากหัวข้อก่อนหน้า (ไม่มีหัวข้อซ้ำ) */
+.ab-a4 .ab-card h3 { font-size: 14.5px; margin-bottom: 4px; }
+.ab-a4 .ab-card li { font-size: 13px; line-height: 1.5; padding: 4px 0 4px 20px; }
+.ab-a4 .ab-card li::before { top: 5px; font-size: 11px; }
+.ab-a4 .ab-levels { grid-template-columns: 1fr; gap: 7px; }
+.ab-a4 .ab-level { padding: 8px 10px; gap: 8px; border-radius: 12px; border-left-width: 5px; }
+.ab-a4 .ab-level > .fa { flex: 0 0 26px; height: 26px; font-size: 12px; }
+.ab-a4 .ab-level b { font-size: 13px; }
+.ab-a4 .ab-level small { font-size: 11.5px; line-height: 1.45; }
+.ab-a4 .ab-roles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.ab-a4 .ab-roles > div { padding: 9px 11px; border-radius: 12px; }
+.ab-a4 .ab-roles b { font-size: 13.5px; }
+.ab-a4 .ab-roles small { font-size: 11.5px; line-height: 1.45; }
+.ab-a4 .ab-grid3 { grid-template-columns: 1fr; gap: 8px; }
+.ab-a4 .ab-mini { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; padding: 9px 12px; border-radius: 12px; }
+.ab-a4 .ab-mini > .fa { grid-row: span 2; font-size: 18px; margin-top: 2px; }
+.ab-a4 .ab-mini b { margin: 0 0 2px; font-size: 13.5px; }
+.ab-a4 .ab-mini p { font-size: 12px; line-height: 1.5; }
+.ab-a4 .ab-benefits { grid-template-columns: 1fr; gap: 5px; }
+.ab-a4 .ab-benefits li { font-size: 13px; line-height: 1.5; padding-left: 26px; }
+
+/* ท้ายหน้า */
+.ab-a4 .ab-close { padding: 0; }
+.ab-a4 .ab-close-h { font-size: 14.5px; margin: 0 0 8px; }
+.ab-a4 .ab-chips { gap: 6px; }
+.ab-a4 .ab-chips span { padding: 4px 10px; font-size: 12px; }
+.ab-a4 .ab-foot { display: none; }   /* ย้ายไปแถบท้ายกระดาษ */
+.ab-a4 .ab-a4-foot {
+    margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 18px;
+    padding: 10px 14px 10px 20px; border-radius: 18px; background: #fff; border: 1px solid var(--sk-line, #d3e4f6);
+}
+.ab-a4 .ab-a4-foot-l { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ab-a4 .ab-a4-foot-l b { font-size: 15px; }
+.ab-a4 .ab-a4-url { font-size: 14px; color: var(--sk-muted, #5b7896); }
+.ab-a4 .ab-a4-url b { color: var(--sk-primary, #2f7fc9); font-size: 17px; }
+.ab-a4 .ab-a4-foot-l small { font-size: 12px; color: var(--sk-muted, #5b7896); }
+.ab-a4 .ab-a4-qr { flex: none; display: flex; align-items: center; gap: 12px; }
+/* วาด QR ลงรูปทีหลังให้คมชัด · 128px ≈ 2 ซม. บนกระดาษ — สแกนจากกระดาษได้ง่าย และยังสแกนได้เมื่อรูปถูกย่อตอนส่งต่อในแชต */
+.ab-a4 .ab-a4-qr-box { display: block; flex: none; width: 128px; height: 128px; }
+.ab-a4 .ab-a4-qr small { display: flex; flex-direction: column; align-items: flex-end; font-size: 12.5px; line-height: 1.45; color: var(--sk-muted, #5b7896); }
+.ab-a4 .ab-a4-qr small b { font-size: 14px; color: var(--sk-ink, #16324f); }
+
+.ab-a4 .ab-card li { padding: 5px 0 5px 20px; }
+.ab-a4 .ab-card li::before { top: 6px; }
+
+/*
+ * html2canvas วัดเส้นฐานตัวหนังสือด้วยรูป 1×1 px ของตัวเอง (vertical-align: baseline) แต่ Tailwind ตั้ง img ทุกตัวเป็น
+ * display: block — รูปวัดตกไปบรรทัดใหม่ ตัวหนังสือทั้งภาพจึงต่ำกว่าจริงราว 0.6 ตัวอักษร · คืนรูปวัดนี้ให้อยู่ในบรรทัด
+ */
+img[src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"] { display: inline !important; }
