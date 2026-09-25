@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# ไฟล์ภายในห้ามเปิดตรงจากเว็บ (Apache/XAMPP) — บน nginx ใช้ deploy/nginx-flood-protect.conf แทน
+RewriteRule ^(config|controllers|libs|models|sql|scripts|src|deploy|node_modules)(/|$) - [R=404,L]
+RewriteRule ^public/uploads/ - [R=404,L]
+RewriteRule (^|/)\. - [R=404,L]
+RewriteRule \.(md|sql|sample|bak|old|orig|save|swp|tmp|log)([.~_-][^/]*)?$ - [R=404,L]
+RewriteRule ~$ - [R=404,L]
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-l
+
+RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]

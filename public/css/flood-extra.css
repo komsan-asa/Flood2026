@@ -1,0 +1,122 @@
+/* ส่วนเสริม (ไม่ต้อง build Tailwind): สถานะรายงาน "รอประกาศ", ตัวนับรีเฟรช, ปุ่มสายด่วน ปภ. 1784 */
+
+/* ---------- สถานะรายงาน ---------- */
+.label-wait-announce { background: #ea580c; color: #fff; }
+.nav-tabs .count.count-alert { background: #ea580c; color: #fff; }
+
+/* ---------- ตัวนับรีเฟรชบนแถบด้านบน (เจ้าหน้าที่) ---------- */
+.refresh-pill {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    border: 1px solid #cfe2f5; background: #f1f7fd; color: #1e4b72;
+    border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12px; line-height: 1.2;
+}
+.refresh-pill .rf-time b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.refresh-pill .rf-cd { font-variant-numeric: tabular-nums; color: #2f6ea5; }
+.refresh-pill .rf-cd.rf-paused { color: #8a9bb0; font-style: italic; }
+.refresh-pill select {
+    border: 1px solid #cfe2f5; background: #fff; color: #1e4b72; border-radius: 999px;
+    padding: 1px 4px; font-size: 12px; height: 22px; cursor: pointer;
+}
+.refresh-pill .rf-now {
+    border: 0; background: #5aa9e6; color: #fff; border-radius: 999px; width: 24px; height: 24px;
+    display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;
+}
+.refresh-pill .rf-now:hover { background: #3d93d6; }
+@media (max-width: 991px) { .refresh-pill .rf-time { display: none; } }
+@media (max-width: 575px) { .refresh-pill select { display: none; } .refresh-pill { padding-left: 8px; } }
+@media print { .refresh-pill { display: none; } }
+
+/* ---------- ปุ่มสายด่วน ปภ. ---------- */
+.btn-ddpm { background: #ea580c; border-color: #ea580c; color: #fff !important; }
+.btn-ddpm:hover, .btn-ddpm:focus { background: #c2410c; border-color: #c2410c; color: #fff !important; }
+.sk-btn-ddpm { background: #f97316; border: 1px solid #ea580c; color: #fff !important; box-shadow: 0 10px 24px -12px rgba(234, 88, 12, .8); }
+.sk-btn-ddpm:hover { background: #ea580c; }
+/* 1669 เจ็บป่วยฉุกเฉิน — พื้นเขียวอ่อน กรอบเขียว */
+.btn-1669, .sk-btn-1669 { background: #dcfce7; border: 1px solid #22c55e; color: #15803d !important; }
+.btn-1669:hover, .btn-1669:focus, .sk-btn-1669:hover { background: #bbf7d0; border-color: #16a34a; color: #166534 !important; }
+.sk-btn-ddpm small { font-size: 12px; font-weight: 500; opacity: .85; }
+@media (max-width: 767px) { .sk-btn-ddpm > small { display: none; } }
+/* เครดิตผู้พัฒนา */
+.sk-dev-credit { margin: 8px 2px 0; font-size: 11.5px; color: var(--sk-muted, #5b7896); opacity: .85; letter-spacing: .2px; }
+.sk-dev-credit-app { white-space: nowrap; }
+/* ปุ่มโทร 2 บรรทัด: คำอธิบาย + เบอร์ (หน้าแผนที่ประชาชน) */
+.sk-call .sk-call-txt { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1.1; text-align: left; }
+.sk-call .sk-call-txt small { display: block; font-size: 11.5px; font-weight: 500; opacity: .95; white-space: nowrap; }
+.sk-call .sk-call-txt b { font-size: 17px; font-weight: 700; letter-spacing: .3px; }
+@media (max-width: 767px) {
+    .sk-top .sk-call { padding: 0 9px; gap: 6px; }
+    .sk-call .sk-call-txt small { font-size: 10px; }
+    .sk-call .sk-call-txt b { font-size: 15px; }
+}
+
+/* ---------- หน้าแผนที่สาธารณะ: นับถอยหลังอัปเดต ---------- */
+.sk-next { font-variant-numeric: tabular-nums; }
+
+/* ---------- ข้อมูลที่ควรรู้ (flood/notices) ---------- */
+.notice-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.notice-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 999px; font-size: 13px;
+    border: 1px solid #dfe6ee; background: #fff; color: #334155 !important; text-decoration: none !important; }
+.notice-chip i { color: var(--nc, #64748b); }
+.notice-chip b { background: var(--nc, #64748b); color: #fff; border-radius: 999px; padding: 0 6px; font-size: 11px; }
+.notice-chip.on { background: #155e9c; border-color: #155e9c; color: #fff !important; }
+.notice-chip.on i { color: #fff; }
+.notice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.notice-card { background: #fff; border: 1px solid #e2e8f0; border-left: 4px solid var(--nc, #64748b); border-radius: 10px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.notice-card.pinned { box-shadow: 0 0 0 2px #fde68a; }
+.notice-card.archived { opacity: .65; }
+.notice-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.notice-cat { color: var(--nc, #64748b); font-weight: 600; }
+.notice-pin { margin-left: auto; color: #d97706; }
+.notice-title { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.35; color: #0f172a; }
+.notice-detail { font-size: 14px; color: #334155; }
+.notice-meta { display: grid; grid-template-columns: 18px 1fr; gap: 2px 6px; margin: 0; font-size: 13px; color: #475569; }
+.notice-meta dt { color: #94a3b8; text-align: center; }
+.notice-meta dd { margin: 0; word-break: break-word; }
+.notice-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: auto; padding-top: 6px; border-top: 1px dashed #e2e8f0; }
+.notice-actions { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.dash-notices { list-style: none; margin: 0; padding: 0; }
+.dash-notices li { display: flex; gap: 10px; padding: 9px 14px; border-top: 1px solid #eef2f6; }
+.dash-notices li:first-child { border-top: 0; }
+.dash-notices .ic { flex: none; width: 28px; height: 28px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--nc, #64748b) 14%, #fff); color: var(--nc, #64748b); }
+.dash-notices .t { font-weight: 600; font-size: 14px; color: #0f172a; }
+.dash-notices .m { font-size: 12px; color: #64748b; }
+.notice-vis { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: #f1f5f9; color: #64748b; }
+.notice-vis.on { background: #e0f2fe; color: #0369a1; }
+
+/* ---------- หน้าประชาชน: ข้อมูลที่ควรรู้ (แผงข้อมูลบนแผนที่) ---------- */
+.sk-news { margin: 0 0 22px; }
+.sk-news-n { display: inline-block; min-width: 18px; padding: 0 6px; border-radius: 999px; background: var(--sk-primary, #2f7fc9); color: #fff; font-size: 11px; text-align: center; margin-left: 4px; }
+.sk-news-item { margin-bottom: 8px; border-radius: 16px; background: rgba(255, 255, 255, .85); border: 1px solid var(--sk-line, #dbe7f3); border-left: 4px solid var(--nc, #64748b); overflow: hidden; }
+.sk-news-item[hidden] { display: none; }
+.sk-news-item summary { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; cursor: pointer; list-style: none; }
+.sk-news-item summary::-webkit-details-marker { display: none; }
+.sk-news-ic { flex: none; width: 30px; height: 30px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--nc, #64748b) 14%, #fff); color: var(--nc, #64748b); }
+.sk-news-body { min-width: 0; display: flex; flex-direction: column; }
+.sk-news-cat { font-size: 11px; font-weight: 600; color: var(--nc, #64748b); }
+.sk-news-title { font-size: 14px; font-weight: 600; color: var(--sk-ink, #0f2940); line-height: 1.35; }
+.sk-news-meta { font-size: 12px; color: var(--sk-muted, #64748b); margin-top: 2px; }
+.sk-news-detail { padding: 0 12px 10px 52px; font-size: 13px; color: #33506e; }
+.sk-news-detail p { margin: 0 0 6px; }
+.sk-news-src { font-size: 12px; color: var(--sk-muted, #64748b); }
+.sk-news-toggle { border: 0; background: var(--sk-primary-soft, #e3f0fc); color: var(--sk-primary, #2f7fc9); font: 600 13px inherit; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+
+/* ---------- หน้าประชาชน: จุดแจ้งที่ยังรอตรวจสอบ + ปุ่มข้อมูลที่ควรรู้ ---------- */
+.sk-legend .sk-pt-sw.sk-pt-pending { background: #fcd34d; border: 2px solid #b45309; }
+.sk-tag-pending { display: inline-block; padding: 2px 10px; border-radius: 999px; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; font-size: 12px; font-weight: 600; }
+.sk-news-fab { background: #fff; color: var(--sk-primary, #2f7fc9) !important; border: 1px solid var(--sk-line, #dbe7f3); box-shadow: 0 10px 24px -14px rgba(47, 127, 201, .7); }
+.sk-news-fab b { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: var(--sk-primary, #2f7fc9); color: #fff; font-size: 12px; }
+
+/* ---------- หน้าประชาชน: สถิติผู้เข้าชม ---------- */
+.sk-visit { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.sk-visit[hidden], .sk-online-mini[hidden] { display: none !important; }
+.sk-visit-item { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; font-size: 12px;
+    background: rgba(255, 255, 255, .8); border: 1px solid var(--sk-line, #dbe7f3); color: var(--sk-muted, #64748b); }
+.sk-visit-item b { color: var(--sk-ink, #0f2940); font-variant-numeric: tabular-nums; }
+.sk-visit-item.on i, .sk-online-mini i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, .6); animation: sk-online-pulse 2s infinite; }
+.sk-online-mini i { margin-right: 4px; vertical-align: 1px; }
+.sk-online-mini b { font-variant-numeric: tabular-nums; }
+@keyframes sk-online-pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); } 70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }

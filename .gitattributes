@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.eot binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+public/leaflet/** -text
+public/bootstrap-3.3.5/** -text
+public/css/font-awesome-4.7.0/** -text

@@ -1,0 +1,16 @@
+# ---- ห้ามขึ้น git: รหัสผ่าน / ข้อมูลประชาชน / ไฟล์สำรอง ----
+config/app.php
+config/*.bak*
+*.bak
+*.bak-*
+_backup_*/
+public/uploads/flood/*
+!public/uploads/flood/.htaccess
+!public/uploads/flood/index.html
+*.log
+
+# ---- เครื่องมือ ----
+node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db

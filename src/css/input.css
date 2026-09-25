@@ -1,0 +1,388 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * SK Flood UI — Tailwind components
+ * ใช้ชื่อ class แบบ Bootstrap 3 (btn / form-control / modal / table …) เหมือนระบบ COC
+ * เพื่อให้ Bootstrap JS + jQuery ทำงานได้ และเขียน view แบบเดิมได้
+ * ส่วนโครงหน้าระบบเจ้าหน้าที่ใช้ชุด .flood-*
+ */
+
+@layer base {
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply font-sans text-ink-700 bg-ink-100 antialiased;
+    margin: 0;
+  }
+
+  a {
+    @apply text-brand-600 no-underline;
+  }
+
+  a:hover {
+    @apply text-brand-700 underline;
+  }
+
+  label {
+    @apply mb-1 block text-sm font-medium text-ink-700;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-semibold text-ink-800;
+  }
+
+  code {
+    @apply rounded bg-ink-300 px-1 py-0.5 text-[0.85em];
+  }
+}
+
+@layer components {
+  /* ---------- Layout ---------- */
+  .container { @apply mx-auto w-full max-w-6xl px-4; }
+  .container-fluid { @apply w-full px-4; }
+  .row { @apply -mx-2 flex flex-wrap; }
+  .row > [class*='col-'] { @apply px-2; }
+  .col-sm-3 { @apply w-full sm:w-1/4; }
+  .col-sm-4 { @apply w-full sm:w-1/3; }
+  .col-sm-6 { @apply w-full sm:w-1/2; }
+  .col-sm-8 { @apply w-full sm:w-2/3; }
+  .col-sm-12 { @apply w-full; }
+  .col-md-3 { @apply w-full md:w-1/4; }
+  .col-md-4 { @apply w-full md:w-1/3; }
+  .col-md-5 { @apply w-full md:w-5/12; }
+  .col-md-6 { @apply w-full md:w-1/2; }
+  .col-md-7 { @apply w-full md:w-7/12; }
+  .col-md-8 { @apply w-full md:w-2/3; }
+  .col-md-12 { @apply w-full; }
+
+  /* ---------- Forms ---------- */
+  .form-group { @apply mb-4; }
+
+  .form-control {
+    @apply block w-full rounded-md border border-ink-200 bg-white px-3 py-2 text-sm text-ink-700 shadow-sm
+      placeholder:text-ink-400
+      focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200;
+    min-height: 38px;
+  }
+
+  .form-control:disabled,
+  .form-control[readonly] { @apply cursor-not-allowed bg-gray-100; }
+
+  select.form-control { @apply pr-8; }
+  textarea.form-control { @apply min-h-[80px]; }
+  .input-sm { @apply py-1.5 text-sm; min-height: 32px; }
+  .help-block { @apply mt-1 text-xs text-ink-500; }
+
+  .checkbox, .radio { @apply relative mb-2 block; }
+  .checkbox label, .radio label { @apply inline-flex cursor-pointer items-start gap-2 font-normal; }
+  .checkbox-inline, .radio-inline { @apply mr-3 inline-flex cursor-pointer items-center gap-1.5 font-normal; }
+
+  .form-inline { @apply flex flex-wrap items-center gap-2; }
+  .form-inline .form-control { @apply w-auto; }
+
+  .required::after { content: ' *'; @apply text-red-600; }
+
+  .has-error .form-control { @apply border-red-500 ring-2 ring-red-100; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-md border border-transparent
+      px-3 py-2 text-sm font-medium leading-none no-underline shadow-sm
+      transition hover:no-underline focus:outline-none focus:ring-2 focus:ring-brand-200
+      disabled:cursor-not-allowed disabled:opacity-50;
+    min-height: 38px;
+  }
+  .btn-default { @apply border-ink-200 bg-white text-ink-700 hover:border-brand-400 hover:bg-gray-50 hover:text-brand-700; }
+  .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700 hover:text-white; }
+  .btn-success { @apply bg-green-600 text-white hover:bg-green-700 hover:text-white; }
+  .btn-danger { @apply bg-red-600 text-white hover:bg-red-700 hover:text-white; }
+  .btn-info { @apply bg-sky-600 text-white hover:bg-sky-700 hover:text-white; }
+  .btn-warning { @apply bg-amber-500 text-white hover:bg-amber-600 hover:text-white; }
+  .btn-link { @apply border-transparent bg-transparent p-0 shadow-none text-brand-600 hover:underline; min-height: 0; }
+  .btn-sm, .btn-xs { @apply px-2.5 py-1 text-xs; min-height: 30px; }
+  .btn-lg { @apply px-5 py-3 text-base; min-height: 48px; }
+  .btn-block { @apply flex w-full; }
+  .btn-group { @apply inline-flex; }
+  .btn-group > .btn { @apply rounded-none; }
+  .btn-group > .btn:first-child { @apply rounded-l-md; }
+  .btn-group > .btn:last-child { @apply rounded-r-md; }
+  .btn-group > .btn + .btn { @apply -ml-px; }
+  .btn-group > .btn.active { @apply border-brand-600 bg-brand-600 text-white; }
+
+  /* ---------- Alerts ---------- */
+  .alert { @apply mb-4 rounded-lg border px-4 py-3 text-sm; }
+  .alert-danger { @apply border-red-200 bg-red-50 text-red-800; }
+  .alert-warning { @apply border-amber-200 bg-amber-50 text-amber-900; }
+  .alert-info { @apply border-sky-200 bg-sky-50 text-sky-900; }
+  .alert-success { @apply border-green-200 bg-green-50 text-green-800; }
+
+  /* ---------- Tables ---------- */
+  .table { @apply w-full border-collapse text-left text-sm text-ink-700; }
+  .table > thead > tr > th,
+  .table > tbody > tr > th,
+  .table > tbody > tr > td { @apply border-b border-ink-200 px-3 py-2.5 align-middle; }
+  .table > thead > tr > th { @apply whitespace-nowrap bg-brand-50 text-xs font-semibold text-brand-700; }
+  .table-striped > tbody > tr:nth-of-type(odd) > td { @apply bg-gray-50/70; }
+  .table-hover > tbody > tr:hover > td { @apply bg-brand-50/70; }
+  .table-condensed > thead > tr > th,
+  .table-condensed > tbody > tr > td { @apply px-2 py-1.5; }
+  .table-responsive { @apply w-full overflow-x-auto; }
+  tr.row-link { @apply cursor-pointer; }
+
+  /* ---------- Labels / badges ---------- */
+  .label { @apply inline-flex items-center gap-1 whitespace-nowrap rounded px-2 py-0.5 text-xs font-semibold text-white; }
+  .label-default { @apply bg-gray-500; }
+  .label-primary { @apply bg-brand-600; }
+  .label-success { @apply bg-green-600; }
+  .label-danger { @apply bg-red-600; }
+  .label-warning { @apply bg-amber-600; }
+  .label-info { @apply bg-sky-600; }
+  .badge { @apply inline-flex min-w-[20px] items-center justify-center rounded-full bg-gray-500 px-1.5 text-xs font-semibold text-white; }
+
+  .lv-badge { @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold text-white; }
+  .lv-badge.lv-evacuated { background: #6d28d9; }
+  .lv-badge.lv-blocked { background: #b91c1c; }
+  .lv-badge.lv-watch { background: #b45309; }
+
+  .pri-urgent { @apply bg-red-600 text-white; }
+  .pri-high { @apply bg-amber-500 text-white; }
+  .pri-normal { @apply bg-gray-400 text-white; }
+
+  .tag { @apply mr-1 mb-1 inline-block rounded-full border border-ink-200 bg-white px-2 py-0.5 text-xs text-ink-600; }
+  .tag-warn { @apply border-amber-300 bg-amber-50 text-amber-900; }
+  .tag-danger { @apply border-red-300 bg-red-50 text-red-800; }
+
+  /* ---------- Modal (Bootstrap JS contract) ---------- */
+  .modal { @apply fixed inset-0 z-[1050] hidden overflow-y-auto outline-none; }
+  .modal.fade { @apply transition-opacity; }
+  .modal.in, .modal.show { @apply block; }
+  .modal-backdrop { @apply fixed inset-0 z-[1040] bg-black/50; }
+  .modal-backdrop.fade { @apply opacity-0; }
+  .modal-backdrop.in, .modal-backdrop.show { @apply opacity-100; }
+  .modal-dialog { @apply relative mx-auto my-6 w-auto max-w-lg px-3; }
+  .modal-lg .modal-dialog, .modal-dialog.modal-lg { @apply max-w-3xl; }
+  .modal-content { @apply relative flex w-full flex-col rounded-xl border border-ink-200 bg-white shadow-pop; }
+  .modal-header { @apply flex items-start justify-between gap-3 border-b border-ink-200 px-4 py-3; }
+  .modal-title { @apply m-0 text-base font-semibold text-ink-800; }
+  .modal-body { @apply relative flex-1 px-4 py-3; }
+  .modal-footer { @apply flex flex-wrap items-center justify-end gap-2 border-t border-ink-200 px-4 py-3; }
+  .close { @apply cursor-pointer border-0 bg-transparent p-0 text-2xl leading-none text-ink-400 hover:text-ink-700; }
+  .modal-open { @apply overflow-hidden; }
+
+  /* ---------- Dropdown (Bootstrap JS) ---------- */
+  .dropdown { @apply relative; }
+  .dropdown-menu { @apply absolute right-0 top-full z-[1000] mt-1 hidden min-w-[220px] rounded-lg border border-ink-200 bg-white py-1 text-sm shadow-pop; }
+  .open > .dropdown-menu { @apply block; }
+
+  /* ---------- Tabs ---------- */
+  .nav-tabs { @apply m-0 mb-4 flex list-none flex-wrap gap-1 border-b border-ink-200 p-0; }
+  .nav-tabs > li > a { @apply -mb-px block rounded-t-md border border-transparent px-3 py-2 text-sm text-ink-600 no-underline hover:bg-white hover:text-brand-700 hover:no-underline; }
+  .nav-tabs > li.active > a { @apply border-ink-200 border-b-white bg-white font-semibold text-brand-700; }
+  .nav-tabs .count { @apply ml-1 rounded-full bg-ink-200 px-1.5 text-xs text-ink-600; }
+  .nav-tabs > li.active .count { @apply bg-brand-600 text-white; }
+
+  /* ---------- Pagination ---------- */
+  .pagination { @apply m-0 flex list-none flex-wrap gap-1 p-0; }
+  .pagination > li > a, .pagination > li > span { @apply block rounded-md border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-600 no-underline hover:bg-brand-50; }
+  .pagination > li.active > a, .pagination > li.active > span { @apply border-brand-600 bg-brand-600 text-white; }
+  .pagination > li.disabled > span { @apply opacity-50; }
+
+  /* ---------- Helpers ---------- */
+  .text-danger { @apply text-red-700; }
+  .text-muted { @apply text-ink-500; }
+  .text-success { @apply text-green-700; }
+  .text-warning { @apply text-amber-700; }
+  .pull-right { @apply float-right; }
+  .clearfix::after { content: ''; display: table; clear: both; }
+  .nowrap { @apply whitespace-nowrap; }
+  .small-muted { @apply text-xs text-ink-500; }
+
+  /* =====================================================================
+   * โครงหน้าระบบเจ้าหน้าที่
+   * ===================================================================== */
+  .flood-app-body { @apply bg-ink-100; overflow-x: hidden; }
+
+  .flood-sidebar {
+    @apply fixed inset-y-0 left-0 z-[1030] flex w-[228px] flex-col text-white/85;
+    background: linear-gradient(180deg, #0c2f4f 0%, #103f68 100%);
+    box-shadow: 2px 0 12px rgba(0,0,0,.15);
+    transition: transform .2s ease;
+  }
+  .flood-sidebar-logo { @apply flex items-center gap-2.5 border-b border-white/10 px-4 py-4 text-lg font-bold text-white; }
+  .flood-sidebar-logo .logo-mark { @apply flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-xl; }
+  .flood-sidebar-logo small { @apply block text-[11px] font-normal text-white/60; }
+  .flood-sidebar-nav { @apply flex-1 overflow-y-auto px-2 py-3; }
+  .flood-nav-section { @apply px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/45; }
+  .flood-nav-item {
+    @apply mb-0.5 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/80 no-underline transition
+      hover:bg-white/10 hover:text-white hover:no-underline;
+  }
+  .flood-nav-item i { @apply w-5 text-center text-base; }
+  .flood-nav-item.active { @apply bg-white/15 font-semibold text-white; box-shadow: inset 3px 0 0 #8cc0ea; }
+  .flood-nav-item .nav-count { @apply ml-auto rounded-full bg-red-500 px-2 text-xs font-bold text-white; }
+  .flood-sidebar-footer { @apply flex items-center justify-around border-t border-white/10 p-2; }
+  .flood-sidebar-footer a { @apply rounded-lg px-3 py-2 text-white/75 hover:bg-white/10 hover:text-white; }
+  .flood-menu-close { @apply ml-auto hidden rounded border-0 bg-transparent p-1 text-white/70; }
+
+  .flood-main { @apply min-h-screen; margin-left: 228px; }
+  .flood-topbar {
+    @apply sticky top-0 z-[1020] flex items-center justify-between gap-3 border-b border-ink-200 bg-white/95 px-4;
+    height: 56px;
+    backdrop-filter: blur(6px);
+  }
+  .flood-topbar-left { @apply flex min-w-0 items-center gap-3; }
+  .flood-topbar-title { @apply min-w-0 truncate text-sm text-ink-600; }
+  .flood-topbar-title strong { @apply text-ink-800; }
+  .flood-topbar-right { @apply flex items-center gap-2; }
+  .flood-menu-toggle { @apply hidden items-center gap-1.5 rounded-md border border-ink-200 bg-white px-2.5 py-1.5 text-sm text-ink-700; }
+  .flood-user-link { @apply hidden max-w-[180px] truncate text-sm font-medium text-ink-700 sm:inline; }
+  .flood-nav-backdrop { @apply fixed inset-0 z-[1025] bg-black/40; }
+
+  .flood-content { @apply px-4 py-4 md:px-6 md:py-5; }
+  .flood-page-header { @apply mb-4 flex flex-wrap items-center justify-between gap-3; }
+  .flood-page-title { @apply m-0 flex items-center gap-2 text-xl font-bold text-ink-800; }
+  .flood-page-title i { @apply text-brand-600; }
+
+  /* ออนไลน์ */
+  .online-pill { @apply inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-800; }
+  .online-dot { @apply inline-block h-2 w-2 rounded-full bg-green-500; box-shadow: 0 0 0 0 rgba(34,197,94,.6); animation: flood-pulse 2s infinite; }
+  .offline-dot { @apply inline-block h-2 w-2 rounded-full bg-gray-300; }
+  .online-list { @apply max-h-[360px] overflow-y-auto; }
+  .online-list-head { @apply border-b border-ink-200 px-3 py-2 text-xs font-semibold text-ink-500; }
+  .online-item { @apply flex items-start gap-2 px-3 py-2 hover:bg-brand-50; }
+  .online-item .who { @apply text-sm font-medium text-ink-800; }
+  .online-item .meta { @apply text-xs text-ink-500; }
+
+  /* การ์ด */
+  .flood-card { @apply mb-4 rounded-xl border border-ink-200 bg-white shadow-card; }
+  .flood-card-header { @apply flex flex-wrap items-center justify-between gap-2 border-b border-ink-200 px-4 py-3 text-sm font-semibold text-ink-800; }
+  .flood-card-body { @apply p-4; }
+
+  /* KPI */
+  .flood-kpi-grid { @apply mb-4 grid gap-3; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .flood-kpi-card { @apply relative rounded-xl border border-ink-200 bg-white px-4 py-3 shadow-card no-underline; }
+  a.flood-kpi-card:hover { @apply border-brand-300 no-underline; }
+  .flood-kpi-card .kpi-value { @apply text-3xl font-bold leading-tight text-ink-800; }
+  .flood-kpi-card .kpi-label { @apply text-sm text-ink-600; }
+  .flood-kpi-card .kpi-sub { @apply mt-0.5 text-xs text-ink-500; }
+  .flood-kpi-card .kpi-icon { @apply absolute right-3 top-3 text-xl opacity-25; }
+  .flood-kpi-card.lv-evacuated { box-shadow: inset 4px 0 0 #7c3aed; }
+  .flood-kpi-card.lv-evacuated .kpi-value { color: #6d28d9; }
+  .flood-kpi-card.lv-blocked { box-shadow: inset 4px 0 0 #dc2626; }
+  .flood-kpi-card.lv-blocked .kpi-value { color: #b91c1c; }
+  .flood-kpi-card.lv-watch { box-shadow: inset 4px 0 0 #f59e0b; }
+  .flood-kpi-card.lv-watch .kpi-value { color: #b45309; }
+  .flood-kpi-card.kpi-danger { box-shadow: inset 4px 0 0 #dc2626; }
+  .flood-kpi-card.kpi-danger .kpi-value { @apply text-red-700; }
+  .flood-kpi-card.kpi-warn { box-shadow: inset 4px 0 0 #f59e0b; }
+  .flood-kpi-card.kpi-ok { box-shadow: inset 4px 0 0 #16a34a; }
+  .flood-kpi-card.kpi-ok .kpi-value { @apply text-green-700; }
+  .flood-kpi-card.kpi-info { box-shadow: inset 4px 0 0 #1f78c1; }
+
+  /* แผนที่ */
+  .flood-map { @apply w-full overflow-hidden rounded-lg border border-ink-200 bg-ink-300; height: 440px; z-index: 0; }
+  .flood-map.map-sm { height: 280px; }
+  .flood-map.map-lg { height: 560px; }
+  .map-legend { @apply flex flex-wrap items-center gap-3 text-xs text-ink-600; }
+  .map-legend .sw { @apply mr-1 inline-block h-3 w-3 rounded-sm align-middle; }
+
+  /* ตัวเลือกแบบการ์ด (radio/checkbox) */
+  .chip-grid { @apply grid gap-2; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .chip-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chip { @apply relative m-0 block cursor-pointer font-normal; }
+  .chip input { @apply absolute opacity-0; pointer-events: none; }
+  .chip-body { @apply flex h-full items-start gap-2 rounded-lg border-2 border-ink-200 bg-white px-3 py-2.5 transition; }
+  .chip:hover .chip-body { @apply border-brand-300; }
+  .chip input:checked + .chip-body { @apply border-brand-500 bg-brand-50; box-shadow: 0 0 0 3px rgba(31,120,193,.15); }
+  .chip input:focus-visible + .chip-body { @apply ring-2 ring-brand-300; }
+  .chip-emoji { @apply text-xl leading-none; }
+  .chip-title { @apply block text-sm font-semibold text-ink-800; }
+  .chip-hint { @apply block text-xs text-ink-500; }
+  .chip.lv-evacuated input:checked + .chip-body { border-color: #7c3aed; background: #f5f3ff; }
+  .chip.lv-blocked input:checked + .chip-body { border-color: #dc2626; background: #fef2f2; }
+  .chip.lv-watch input:checked + .chip-body { border-color: #f59e0b; background: #fffbeb; }
+
+  /* ไทม์ไลน์ */
+  .timeline { @apply m-0 list-none p-0; }
+  .timeline-item { @apply relative border-l-2 border-ink-200 pb-4 pl-5; }
+  .timeline-item:last-child { @apply pb-0; }
+  .timeline-item::before { content: ''; @apply absolute -left-[7px] top-1 h-3 w-3 rounded-full border-2 border-white bg-brand-500; }
+  .timeline-item .t-head { @apply text-sm font-semibold text-ink-800; }
+  .timeline-item .t-meta { @apply text-xs text-ink-500; }
+  .timeline-item .t-note { @apply mt-1 whitespace-pre-line rounded-md bg-ink-100 px-3 py-2 text-sm text-ink-700; }
+
+  /* key-value */
+  .kv { @apply grid gap-x-4 gap-y-2 text-sm; grid-template-columns: 140px 1fr; }
+  .kv dt { @apply text-ink-500; }
+  .kv dd { @apply m-0 text-ink-800; }
+
+  .photo-grid { @apply flex flex-wrap gap-2; }
+  .photo-grid a { @apply block overflow-hidden rounded-lg border border-ink-200; }
+  .photo-grid img { @apply block h-28 w-28 object-cover; }
+
+  /* แจ้งเตือนมุมจอ */
+  .flood-toast-wrap { @apply pointer-events-none fixed right-4 top-4 z-[2000] flex w-[340px] max-w-[calc(100vw-2rem)] flex-col gap-2; }
+  .flood-toast { @apply pointer-events-auto rounded-lg border px-4 py-3 text-sm shadow-pop; animation: flood-in .2s ease-out; }
+  .flood-toast.t-success { @apply border-green-200 bg-green-50 text-green-900; }
+  .flood-toast.t-danger { @apply border-red-200 bg-red-50 text-red-900; }
+  .flood-toast.t-info { @apply border-sky-200 bg-sky-50 text-sky-900; }
+
+  .empty-state { @apply px-4 py-10 text-center text-sm text-ink-500; }
+  .empty-state i { @apply mb-2 block text-3xl text-ink-300; }
+
+  /* ตารางกลายเป็นการ์ดบนมือถือ */
+  @media (max-width: 767px) {
+    .table-cards > thead { display: none; }
+    .table-cards, .table-cards > tbody, .table-cards > tbody > tr, .table-cards > tbody > tr > td { display: block; width: 100%; }
+    .table-cards > tbody > tr { @apply mb-3 rounded-xl border border-ink-200 bg-white px-3 py-2 shadow-card; }
+    .table-cards > tbody > tr > td { @apply flex items-baseline justify-between gap-3 border-0 px-0 py-1 text-right; }
+    .table-cards > tbody > tr > td::before { content: attr(data-label); @apply shrink-0 text-left text-xs text-ink-500; }
+    .table-cards > tbody > tr > td[data-label=""]::before,
+    .table-cards > tbody > tr > td:not([data-label])::before { content: none; }
+    .table-cards > tbody > tr > td[colspan] { @apply block text-center; }
+  }
+
+  /* มือถือ/แท็บเล็ต: แถบเมนูซ่อนเป็นลิ้นชัก */
+  @media (max-width: 991px) {
+    .flood-sidebar { transform: translateX(-100%); }
+    .flood-sidebar.open { transform: translateX(0); }
+    .flood-main { margin-left: 0; }
+    .flood-menu-toggle { display: inline-flex; }
+    .flood-menu-close { display: inline-block; }
+  }
+}
+
+@keyframes flood-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(34,197,94,.55); }
+  70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+}
+
+@keyframes flood-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* หมุดบนแผนที่ (divIcon ของ Leaflet) */
+.flood-pin { background: transparent; border: 0; }
+.flood-pin .pin {
+  width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.flood-pin .pin i { transform: rotate(45deg); color: #fff; font-size: 13px; }
+.flood-dot-pin .dot {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+.leaflet-popup-content { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 13px; line-height: 1.5; }
+.leaflet-popup-content .pop-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.leaflet-container a.btn { color: #fff; }
+.zone-label {
+  background: rgba(255,255,255,.92); border: 1px solid rgba(0,0,0,.15); border-radius: 6px;
+  padding: 1px 6px; font-size: 11px; font-weight: 600; color: #18212d; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}

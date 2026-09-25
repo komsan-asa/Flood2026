@@ -1,0 +1,91 @@
+/*
+ * SK Flood — ธีมฟ้าพาสเทลสำหรับหน้าประชาชน (แผนที่ / แจ้งจุดน้ำ)
+ * ใช้ชื่อ class ขึ้นต้น sk- ทั้งหมด ไม่ชนกับ .pub-* (public.css) และ Tailwind
+ */
+:root {
+    --sk-bg: #eef6ff;
+    --sk-bg-2: #deedfc;
+    --sk-card: #ffffff;
+    --sk-glass: rgba(255, 255, 255, .82);
+    --sk-soft: #e8f3fe;
+    --sk-line: #d3e4f6;
+    --sk-ink: #16324f;
+    --sk-muted: #5b7896;
+    --sk-primary: #2f7fc9;
+    --sk-primary-2: #5aa6e6;
+    --sk-primary-soft: #dcecfc;
+    --sk-sky: #a9d8ff;
+    --sk-red: #e5485a;
+    --sk-red-soft: #fde8eb;
+    --sk-ok: #2fa877;
+    --sk-ok-soft: #e1f6ed;
+    --sk-evacuated: #7c3aed;
+    --sk-blocked: #dc2626;
+    --sk-watch: #f59e0b;
+    --sk-radius: 20px;
+    --sk-shadow: 0 18px 44px -22px rgba(47, 127, 201, .45);
+    --sk-font: "Anuphan", "Segoe UI", Tahoma, "Noto Sans Thai", sans-serif;
+}
+
+.flood-public-body { font-family: var(--sk-font); }
+.flood-public-body .leaflet-container,
+.flood-public-body .leaflet-popup-content { font-family: var(--sk-font); }
+
+.sk-glass {
+    background: var(--sk-glass);
+    -webkit-backdrop-filter: saturate(160%) blur(16px);
+    backdrop-filter: saturate(160%) blur(16px);
+    border: 1px solid rgba(255, 255, 255, .7);
+    box-shadow: var(--sk-shadow);
+}
+
+/* โลโก้ */
+.sk-mark {
+    width: 40px; height: 40px; border-radius: 13px; flex: none;
+    display: grid; place-items: center; color: #fff;
+    background: linear-gradient(135deg, #79bdf2, var(--sk-primary));
+    box-shadow: 0 6px 16px -6px rgba(47, 127, 201, .7);
+}
+.sk-mark svg { width: 22px; height: 22px; }
+
+/* ปุ่ม */
+.sk-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 44px; padding: 0 18px; border-radius: 14px; border: 1px solid transparent;
+    font: 600 15px/1 var(--sk-font); white-space: nowrap; cursor: pointer;
+    text-decoration: none !important; transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
+}
+.sk-btn:active { transform: scale(.97); }
+.sk-btn:focus-visible { outline: 3px solid rgba(47, 127, 201, .35); outline-offset: 2px; }
+.sk-btn[disabled] { opacity: .55; cursor: not-allowed; transform: none; }
+.sk-btn svg, .sk-btn .fa { font-size: 17px; width: 18px; height: 18px; }
+.sk-btn-primary { background: linear-gradient(135deg, var(--sk-primary-2), var(--sk-primary)); color: #fff !important; box-shadow: 0 10px 24px -12px rgba(47, 127, 201, .8); }
+.sk-btn-primary:hover { box-shadow: 0 12px 28px -10px rgba(47, 127, 201, .9); }
+.sk-btn-red { background: var(--sk-red); color: #fff !important; box-shadow: 0 10px 24px -12px rgba(229, 72, 90, .8); }
+.sk-btn-soft { background: var(--sk-primary-soft); color: var(--sk-primary) !important; }
+.sk-btn-soft:hover { background: #cfe4fa; }
+.sk-btn-ghost { background: rgba(255, 255, 255, .7); border-color: var(--sk-line); color: var(--sk-ink) !important; }
+.sk-btn-ghost:hover { background: #fff; }
+
+.sk-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .6px; color: var(--sk-muted); margin: 0 0 10px; }
+
+.sk-live { width: 8px; height: 8px; border-radius: 50%; background: var(--sk-ok); flex: none; animation: sk-pulse 2s infinite; }
+@keyframes sk-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(47, 168, 119, .55); }
+    70% { box-shadow: 0 0 0 8px rgba(47, 168, 119, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(47, 168, 119, 0); }
+}
+
+/* แผนที่ทั้งหน้าประชาชน: ลดความสดของแผนที่ฐานให้เข้าโทนพาสเทล */
+.sk-map .leaflet-tile-pane { filter: saturate(.55) brightness(1.04) hue-rotate(-6deg); }
+.sk-map .leaflet-control-attribution { background: rgba(255, 255, 255, .75); border-radius: 8px 0 0 0; font-size: 10px; }
+.sk-map .leaflet-control-zoom { border: 0 !important; box-shadow: var(--sk-shadow) !important; border-radius: 14px !important; overflow: hidden; }
+.sk-map .leaflet-control-zoom a { width: 38px !important; height: 38px !important; line-height: 38px !important; color: var(--sk-ink) !important; border-color: var(--sk-line) !important; }
+.flood-public-body .leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--sk-shadow); }
+
+@media (prefers-reduced-motion: reduce) {
+    .flood-public-body *, .flood-public-body *::before, .flood-public-body *::after { animation: none !important; transition: none !important; }
+}
+
+/* attribute hidden ต้องชนะ display ของปุ่ม */
+.sk-btn[hidden], .sk-clear[hidden], .flood-public-body [hidden] { display: none !important; }

@@ -1,0 +1,13 @@
+{
+  "name": "sk-flood",
+  "version": "1.0.0",
+  "description": "SK Flood UI (Tailwind CSS) — ระบบช่วยเหลือผู้ประสบภัยน้ำท่วม จังหวัดสระแก้ว",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/css/input.css -o ./public/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./src/css/input.css -o ./public/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

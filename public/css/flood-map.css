@@ -1,0 +1,68 @@
+/*
+ * ภาพประกอบในบอลลูนพื้นที่ + ตัวดูภาพเต็มจอ (FloodMap.lightbox ใน public/js/flood-map.js)
+ * header.php โหลดไฟล์นี้ทุกหน้าที่มีแผนที่ — ใช้ร่วมกันทั้งหน้าประชาชนและหน้าเจ้าหน้าที่
+ */
+
+/* ---------- ภาพในบอลลูน ---------- */
+.fm-pop-photo {
+    position: relative; display: block; width: 100%; height: 150px; margin: 0 0 10px; padding: 0;
+    border: 0; border-radius: 12px; overflow: hidden; background: #e3eef9; cursor: zoom-in;
+}
+.fm-pop-photo img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .3s ease; }
+.fm-pop-photo:hover img { transform: scale(1.04); }
+.fm-pop-photo:focus-visible { outline: 3px solid rgba(47, 127, 201, .5); outline-offset: 2px; }
+/* จอมือถือ: ภาพเตี้ยลง บอลลูนจะพอดีช่องระหว่างแถบหัวเว็บกับปุ่มลอย/แผงด้านล่าง */
+@media (max-width: 480px) {
+    .fm-pop-photo { height: 118px; margin-bottom: 8px; }
+}
+.fm-pop-chip {
+    position: absolute; right: 8px; bottom: 8px; display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 9px; border-radius: 999px; background: rgba(15, 23, 42, .62); color: #fff;
+    font-size: 12px; font-weight: 600; line-height: 1.6; pointer-events: none;
+}
+
+/* ---------- ตัวดูภาพเต็มจอ ---------- */
+body.fm-lb-open { overflow: hidden; }
+.fm-lb {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 3000;
+    display: flex; flex-direction: column; background: rgba(8, 18, 32, .94); color: #fff; outline: none;
+    animation: fm-lb-in .16s ease-out;
+}
+@keyframes fm-lb-in { from { opacity: 0; } to { opacity: 1; } }
+.fm-lb-bar {
+    display: flex; align-items: center; gap: 12px; flex: none;
+    padding: 10px 10px 10px 18px; padding-top: max(10px, env(safe-area-inset-top));
+}
+.fm-lb-title { flex: 1; min-width: 0; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fm-lb-count { flex: none; font-size: 13px; opacity: .8; font-variant-numeric: tabular-nums; }
+.fm-lb-btn {
+    display: inline-flex; align-items: center; justify-content: center; flex: none;
+    width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, .14); color: #fff; font-size: 18px; line-height: 1; cursor: pointer; transition: background .15s;
+}
+.fm-lb-btn:hover { background: rgba(255, 255, 255, .26); }
+.fm-lb-btn:focus-visible { outline: 3px solid rgba(147, 197, 253, .9); outline-offset: 2px; }
+.fm-lb-stage { position: relative; flex: 1; min-height: 0; }
+/* ภาพจัดกลางและย่อให้พอดีพื้นที่ (absolute + margin auto ใช้ได้ทุกเบราว์เซอร์) */
+.fm-lb-img {
+    position: absolute; top: 4px; right: 12px; bottom: 16px; left: 12px; margin: auto;
+    max-width: calc(100% - 24px); max-height: calc(100% - 20px); object-fit: contain; border-radius: 8px;
+    -webkit-user-select: none; user-select: none; transition: opacity .15s;
+}
+.fm-lb-img.is-loading { opacity: .3; }
+.fm-lb-state {
+    position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+    display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; font-size: 15px;
+}
+.fm-lb-state .fa { font-size: 28px; opacity: .85; }
+.fm-lb-nav { position: absolute; top: 50%; margin-top: -22px; z-index: 1; background: rgba(15, 23, 42, .5); }
+.fm-lb-prev { left: 10px; left: max(10px, env(safe-area-inset-left)); }
+.fm-lb-next { right: 10px; right: max(10px, env(safe-area-inset-right)); }
+@media (max-width: 640px) {
+    .fm-lb-nav { width: 40px; height: 40px; margin-top: -20px; font-size: 16px; }
+    .fm-lb-img { right: 0; left: 0; max-width: 100%; border-radius: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .fm-lb { animation: none; }
+    .fm-pop-photo img, .fm-lb-img { transition: none; }
+}

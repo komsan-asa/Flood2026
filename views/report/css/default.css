@@ -1,0 +1,8 @@
+/* ฟอร์มสาธารณะ (แจ้งจุดน้ำ / ขอความช่วยเหลือ) — ส่วนที่ต่างจาก public.css */
+.chip-body { min-height: 52px; }
+.chip-title { font-size: 15px; }
+@media (max-width: 380px) {
+    .chip-grid.cols-2 { grid-template-columns: minmax(0, 1fr); }
+}
+.pub-form-wrap .form-control { font-size: 16px; min-height: 44px; } /* 16px กัน iPhone ซูมหน้าเองตอนแตะช่องกรอก */
+.pub-status-card { background: #fff; border: 1px solid var(--pub-line); border-radius: 16px; padding: 16px; margin-top: 12px; }
