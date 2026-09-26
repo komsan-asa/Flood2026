@@ -35,7 +35,8 @@ foreach ($rows as $r) {
 
 <form class="filter-bar" method="get" action="<?= URL ?>flood/vulnerable" style="margin-bottom:12px">
     <input type="search" name="q" value="<?= h($f['q']) ?>" class="form-control grow" placeholder="ค้นหาชื่อ / HN / เบอร์โทร / ที่อยู่" />
-    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'data-pv-for' => 'vfAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
+    <?= flood_region_select($this->regions, array('name' => 'region', 'class' => 'form-control', 'data-rg-for' => 'fbProvince', 'aria-label' => 'ภาค'), $f['region'] ?? '', 'ทุกภาค') ?>
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'id' => 'fbProvince', 'class' => 'form-control', 'data-pv-for' => 'vfAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
     <select name="amphoe" class="form-control" id="vfAmphoe">
         <option value="">ทุกอำเภอ</option>
         <?= flood_amphoe_options($this->amphoes, $f['amphoe'], 'อ.') ?>

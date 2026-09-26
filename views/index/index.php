@@ -67,7 +67,7 @@ $icons = array(
                     <span class="sk-news-ic" aria-hidden="true"><i class="fa <?= h($nc['icon']) ?>"></i></span>
                     <span class="sk-news-body">
                         <span class="sk-news-cat"><?= h($nc['name']) ?></span>
-                        <span class="sk-news-title"><?= h($n['title']) ?></span>
+                        <span class="sk-news-title"><?= h($n['title']) ?><?php if (isset($n['verify']) && $n['verify'] === 'announced') { ?> <span class="sk-tag-pending">⏳ รอตรวจสอบ</span><?php } ?></span>
                         <span class="sk-news-meta"><?= h(trim((string) $n['place'] . ($n['amphoe_name'] ? ' · อ.' . $n['amphoe_name'] : ''), ' ·')) ?><?= ($n['place'] || $n['amphoe_name']) ? ' · ' : '' ?><?= h(flood_ago($n['info_at'])) ?></span>
                     </span>
                 </summary>
@@ -90,18 +90,25 @@ $icons = array(
             <p class="sk-eyebrow" style="margin:0">พื้นที่ประกาศ <b id="pubTotal"><?= (int) ($counts['total'] ?? 0) ?></b> แห่ง · จุดแจ้ง <b id="pubPoints"><?= count(array_filter((array) $this->points, function ($p) { return empty($p['pending']); })) ?></b> จุด<span class="sk-pend-wrap" hidden> · รอตรวจสอบ <b id="pubPending">0</b></span></p>
             <button type="button" class="sk-clear" id="pubLevelClear" hidden>ล้างตัวกรอง <b id="pubLevelName"></b> ✕</button>
         </div>
-        <?php if (count((array) $this->provinces) > 1) { ?>
-        <div class="sk-chips sk-chips-pv" id="pubProvince" role="group" aria-label="เลือกจังหวัด">
-            <button type="button" class="sk-chip" data-province="" aria-pressed="true">ทุกจังหวัด</button>
-            <?php foreach ($this->provinces as $p) { ?>
-            <button type="button" class="sk-chip" data-province="<?= h($p['province_code']) ?>" aria-pressed="false"><?= h($p['name']) ?></button>
+        <?php $multiRg = count((array) $this->regions) > 1; $multiPv = count((array) $this->provinces) > 1; ?>
+        <?php if ($multiRg) { ?>
+        <div class="sk-chips sk-chips-rg" id="pubRegionChips" role="group" aria-label="เลือกภาค">
+            <button type="button" class="sk-chip" data-region="" aria-pressed="true">ทั้งประเทศ</button>
+            <?php foreach ($this->regions as $r) { ?>
+            <button type="button" class="sk-chip" data-region="<?= h($r['region']) ?>" aria-pressed="false"><?= h($r['name']) ?></button>
             <?php } ?>
         </div>
         <?php } ?>
-        <div class="sk-chips" id="pubAmphoe" role="group" aria-label="เลือกอำเภอ"<?= count((array) $this->provinces) > 1 ? ' hidden' : '' ?>>
+        <?php if ($multiPv) { ?>
+        <!-- จังหวัด/อำเภอ สร้างจาก PUBLIC_DATA ตามภาค/จังหวัดที่เลือก (views/index/js/default.js) -->
+        <div class="sk-chips sk-chips-pv" id="pubProvince" role="group" aria-label="เลือกจังหวัด"<?= $multiRg ? ' hidden' : '' ?>></div>
+        <?php } ?>
+        <div class="sk-chips" id="pubAmphoe" role="group" aria-label="เลือกอำเภอ"<?= $multiPv ? ' hidden' : '' ?>>
+            <?php if (!$multiPv) { ?>
             <button type="button" class="sk-chip" data-amphoe="" aria-pressed="true">ทุกอำเภอ</button>
             <?php foreach ($this->amphoes as $a) { ?>
-            <button type="button" class="sk-chip" data-amphoe="<?= h($a['amphoe_code']) ?>" data-pv="<?= h($a['province_code']) ?>" aria-pressed="false"><?= h($a['name']) ?></button>
+            <button type="button" class="sk-chip" data-amphoe="<?= h($a['amphoe_code']) ?>" aria-pressed="false"><?= h($a['name']) ?></button>
+            <?php } ?>
             <?php } ?>
         </div>
         <div id="pubList" class="sk-zones" aria-live="polite"></div>
@@ -147,10 +154,18 @@ $icons = array(
         'zones' => $this->zones,
         'points' => (array) $this->points,
         'counts' => $counts,
-        'region' => flood_region_name(),
+        'area' => flood_region_name(),
+        'regions' => array_map(function ($r) {
+            return array('code' => $r['region'], 'name' => $r['name']);
+        }, (array) $this->regions),
         'provinces' => array_map(function ($p) {
-            return array('code' => $p['province_code'], 'name' => $p['name'], 'lat' => $p['lat'], 'lng' => $p['lng']);
+            return array('code' => $p['province_code'], 'name' => $p['name'], 'region' => $p['region'], 'lat' => $p['lat'], 'lng' => $p['lng']);
         }, (array) $this->provinces),
+        // อำเภอแบบย่อ [รหัส, ชื่อ] — สร้างปุ่มเมื่อเลือกจังหวัด
+        'amphoes' => count((array) $this->provinces) > 1 ? array_map(function ($a) {
+            return array($a['amphoe_code'], $a['name']);
+        }, (array) $this->amphoes) : array(),
+        'region' => flood_region_param('region'),
         'province' => flood_province_param('province'),
     )) ?>;
 </script>

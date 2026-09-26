@@ -26,18 +26,23 @@ $(function () {
     }
 
     /* ---------- ตัวกรองตำบล ---------- */
-    var tambons = window.VULN_TAMBONS || [];
+    var tambons = Flood.tambonList(window.VULN_TAMBONS);   // โหลดเพิ่มทีละอำเภอ
     function fillTambon(selected) {
         var a = $('#vfAmphoe').val();
         var $t = $('#vfTambon').empty().append('<option value="">ทุกตำบล</option>');
-        tambons.forEach(function (t) {
-            if (a && t.amphoe_code === a) {
-                $t.append($('<option>').val(t.tambon_code).text('ต.' + t.name));
+        Flood.loadTambons(a).always(function () {
+            if ($('#vfAmphoe').val() !== a) {
+                return;
+            }
+            tambons.forEach(function (t) {
+                if (a && t.amphoe_code === a) {
+                    $t.append($('<option>').val(t.tambon_code).text('ต.' + t.name));
+                }
+            });
+            if (selected) {
+                $t.val(selected);
             }
         });
-        if (selected) {
-            $t.val(selected);
-        }
     }
     $('#vfAmphoe').on('change', function () { fillTambon(''); });
     fillTambon($('#vfTambon').data('selected'));

@@ -3,7 +3,7 @@
 /**
  * API สาธารณะสำหรับหน้าแผนที่ — คืนเฉพาะพื้นที่ประกาศ (ไม่มีข้อมูลส่วนบุคคล)
  *   GET api/zones             พื้นที่ที่ประกาศอยู่ทั้งหมด (photos = รหัสภาพประกอบ)
- *   GET api/zones?amphoe=2706 เฉพาะอำเภอ · ?province=27 เฉพาะจังหวัด
+ *   GET api/zones?amphoe=2706 เฉพาะอำเภอ · ?province=27 เฉพาะจังหวัด · ?region=east เฉพาะภาค
  *   GET api/zoneThumb/<id>    ภาพย่อสำหรับบอลลูน (640px)
  *   GET api/zonePhoto/<id>    ภาพขนาดเต็ม (1600px)
  *   GET api/votes?zone=<id>   ยอด Like / Not Like ของพื้นที่ + เสียงของเบราว์เซอร์นี้
@@ -25,14 +25,25 @@ class Api extends Controller {
             $amphoe = '';
         }
         $province = flood_province_param('province');
+        $region = flood_region_param('region');
         flood_json(array(
             'chk' => true,
-            'zones' => $this->model->publicZones($amphoe, $province),
-            'points' => $this->model->publicReportPoints($amphoe, $province),
+            'zones' => $this->model->publicZones($amphoe, $province, $region),
+            'points' => $this->model->publicReportPoints($amphoe, $province, $region),
             'counts' => $this->model->zoneCounts(),
             'updated' => date('Y-m-d H:i:s'),
             'updated_th' => flood_thai_date(time()),
         ));
+    }
+
+    /** รายชื่อตำบลของอำเภอ (ข้อมูลอ้างอิงสาธารณะ) — ฟอร์มเลือกตำบลโหลดทีละอำเภอ */
+    function tambons() {
+        $amphoe = flood_in('amphoe', '', $_GET);
+        if (!preg_match('/^\d{4}$/', $amphoe)) {
+            flood_json(array('chk' => false, 'msg' => 'ระบุรหัสอำเภอ 4 หลัก', 'tambons' => array()));
+        }
+        header('Cache-Control: public, max-age=86400');
+        flood_json(array('chk' => true, 'tambons' => $this->model->tambonsOf($amphoe)));
     }
 
     /**

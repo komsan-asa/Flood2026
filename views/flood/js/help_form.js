@@ -2,7 +2,7 @@
 $(function () {
     'use strict';
 
-    var tambons = window.HF_TAMBONS || [];
+    var tambons = Flood.tambonList(window.HF_TAMBONS);   // โหลดเพิ่มทีละอำเภอ
     var picker = FloodMap.picker('pickMap', { lat: $('#fLat'), lng: $('#fLng'), acc: $('#fAcc'), status: $('#locStatus') });
     var photos = FloodUpload.bind($('#fPhotos'), $('#fPreview'), 3);
 
@@ -11,10 +11,15 @@ $(function () {
     $('#fAmphoe').on('change', function () {
         var a = $(this).val();
         var $t = $('#fTambon').empty().append('<option value="">—</option>');
-        tambons.forEach(function (t) {
-            if (t.amphoe_code === a) {
-                $t.append($('<option>').val(t.tambon_code).text(t.name));
+        Flood.loadTambons(a).always(function () {
+            if ($('#fAmphoe').val() !== a) {
+                return;   // เปลี่ยนอำเภออีกแล้ว
             }
+            tambons.forEach(function (t) {
+                if (t.amphoe_code === a) {
+                    $t.append($('<option>').val(t.tambon_code).text(t.name));
+                }
+            });
         });
     });
     $('#fTambon').on('change', function () {

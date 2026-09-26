@@ -3,7 +3,7 @@ $(function () {
     'use strict';
 
     var cfg = window.VFORM || {};
-    var tambons = cfg.tambons || [];
+    var tambons = Flood.tambonList(cfg.tambons);   // โหลดเพิ่มทีละอำเภอ
     var picker = FloodMap.picker('vMap', {
         lat: $('#vLat'), lng: $('#vLng'), status: $('#vLocStatus'), initial: cfg.initial,
         initialText: '<i class="fa fa-map-marker"></i> ตำแหน่งบ้านที่บันทึกไว้ — ลากหมุดเพื่อปรับได้'
@@ -18,14 +18,19 @@ $(function () {
     function fillTambon(selected) {
         var a = $('#vAmphoe').val();
         var $t = $('#vTambon').empty().append('<option value="">—</option>');
-        tambons.forEach(function (t) {
-            if (t.amphoe_code === a) {
-                $t.append($('<option>').val(t.tambon_code).text(t.name));
+        Flood.loadTambons(a).always(function () {
+            if ($('#vAmphoe').val() !== a) {
+                return;
+            }
+            tambons.forEach(function (t) {
+                if (t.amphoe_code === a) {
+                    $t.append($('<option>').val(t.tambon_code).text(t.name));
+                }
+            });
+            if (selected) {
+                $t.val(selected);
             }
         });
-        if (selected) {
-            $t.val(selected);
-        }
     }
     $('#vAmphoe').on('change', function () { fillTambon(''); });
     $('#vTambon').on('change', function () {

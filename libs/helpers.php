@@ -942,9 +942,9 @@ function flood_map_config() {
     }
     return array(
         // ระบบครอบคลุมหลายจังหวัด → เปิดแผนที่ทั้งภูมิภาค (ตั้งเองได้ด้วย REGION_CENTER_LAT/LNG, REGION_ZOOM)
-        'center' => array(defined('REGION_CENTER_LAT') ? (float) REGION_CENTER_LAT : 13.15,
-            defined('REGION_CENTER_LNG') ? (float) REGION_CENTER_LNG : 101.75),
-        'zoom' => defined('REGION_ZOOM') ? (int) REGION_ZOOM : 8,
+        'center' => array(defined('REGION_CENTER_LAT') ? (float) REGION_CENTER_LAT : 13.2,
+            defined('REGION_CENTER_LNG') ? (float) REGION_CENTER_LNG : 101.0),
+        'zoom' => defined('REGION_ZOOM') ? (int) REGION_ZOOM : 6,
         'tileUrl' => MAP_TILE_URL,
         'attribution' => MAP_TILE_ATTRIBUTION,
         'levels' => $levels,
@@ -1204,7 +1204,39 @@ function flood_publish_image($src, $mime, $origName = '') {
 
 /** ชื่อพื้นที่ที่ระบบครอบคลุม (ตั้งได้ด้วย REGION_NAME ใน config/app.php) */
 function flood_region_name() {
-    return defined('REGION_NAME') && REGION_NAME !== '' ? REGION_NAME : 'ภาคตะวันออก';
+    return defined('REGION_NAME') && REGION_NAME !== '' ? REGION_NAME : 'ประเทศไทย';
+}
+
+/** 6 ภาค (ราชบัณฑิตยสถาน) — ลำดับนี้ใช้ในตัวกรองทุกหน้า */
+function flood_regions() {
+    return array(
+        'north' => 'ภาคเหนือ',
+        'northeast' => 'ภาคตะวันออกเฉียงเหนือ',
+        'central' => 'ภาคกลาง',
+        'east' => 'ภาคตะวันออก',
+        'west' => 'ภาคตะวันตก',
+        'south' => 'ภาคใต้',
+    );
+}
+
+/** รหัสภาคจาก request (ไม่รู้จัก = '') */
+function flood_region_param($key = 'region', $src = null) {
+    $v = flood_in($key, '', $src === null ? $_GET : $src);
+    return array_key_exists($v, flood_regions()) ? $v : '';
+}
+
+/** <select> ภาค — data-rg-for = id ของ select จังหวัด (รายการจังหวัดเหลือเฉพาะภาคที่เลือก) */
+function flood_region_select($regions, $attrs = array(), $selected = '', $allLabel = 'ทุกภาค') {
+    $a = '';
+    foreach ($attrs as $k => $v) {
+        $a .= ' ' . h($k) . '="' . h($v) . '"';
+    }
+    $html = '<select' . $a . '><option value="">' . h($allLabel) . '</option>';
+    foreach ((array) $regions as $r) {
+        $html .= '<option value="' . h($r['region']) . '"' . ((string) $selected === (string) $r['region'] ? ' selected' : '')
+            . '>' . h($r['name']) . '</option>';
+    }
+    return $html . '</select>';
 }
 
 /** รหัสจังหวัดของอำเภอ/ตำบล */
@@ -1229,9 +1261,18 @@ function flood_province_select($provinces, $attrs = array(), $selected = '', $al
         $a .= ' ' . h($k) . '="' . h($v) . '"';
     }
     $html = '<select' . $a . '><option value="">' . h($allLabel) . '</option>';
+    // หลายภาค → แบ่งกลุ่มตามภาค (สระแก้ว/จังหวัดที่เรียงไว้ก่อน อยู่กลุ่มแรก)
+    $groups = array();
     foreach ((array) $provinces as $p) {
-        $html .= '<option value="' . h($p['province_code']) . '"' . ((string) $selected === (string) $p['province_code'] ? ' selected' : '')
-            . '>จ.' . h($p['name']) . '</option>';
+        $rg = isset($p['region']) ? (string) $p['region'] : '';
+        if (!isset($groups[$rg])) {
+            $groups[$rg] = array('name' => isset($p['region_name']) && $p['region_name'] !== '' ? $p['region_name'] : 'จังหวัด', 'opts' => '');
+        }
+        $groups[$rg]['opts'] .= '<option value="' . h($p['province_code']) . '" data-rg="' . h($rg) . '"'
+            . ((string) $selected === (string) $p['province_code'] ? ' selected' : '') . '>จ.' . h($p['name']) . '</option>';
+    }
+    foreach ($groups as $rg => $g) {
+        $html .= count($groups) > 1 ? '<optgroup label="' . h($g['name']) . '" data-rg="' . h($rg) . '">' . $g['opts'] . '</optgroup>' : $g['opts'];
     }
     return $html . '</select>';
 }

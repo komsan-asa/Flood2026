@@ -25,6 +25,7 @@ class Index extends Controller {
         }
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
+        $this->view->regions = $this->model->getRegions();
         $this->view->zones = $this->model->publicZones();
         $this->view->points = $this->model->publicReportPoints();
         $this->view->counts = $this->model->zoneCounts();
@@ -64,7 +65,7 @@ class Index extends Controller {
         try {
             $st['provinces'] = count($this->model->getProvinces());
             $st['amphoes'] = count($this->model->getAmphoes());
-            $st['tambons'] = count($this->model->getTambons());
+            $st['tambons'] = $this->model->countTambons();
             $c = $this->model->zoneCounts();
             $st['zones'] = (int) $c['total'];
             foreach ($this->model->publicReportPoints() as $p) {

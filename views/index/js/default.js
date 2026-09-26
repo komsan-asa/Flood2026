@@ -21,14 +21,19 @@ $(function () {
     var amphoeName = '';
     var provinceFilter = '';
     var provinceName = '';
-    var regionName = data.region || 'ภาคตะวันออก';
+    var regionFilter = '';
+    var regionLabel = '';
+    var areaName = data.area || 'ประเทศไทย';   // พื้นที่ทั้งหมดของระบบ
     /** ขอบเขตที่กำลังดู — ใช้ในข้อความ "ภาพรวม..." / "ยังไม่มีพื้นที่ประกาศ..." */
     function scopeName(prefix) {
-        var s = amphoeName ? 'อ.' + amphoeName : (provinceName ? 'จ.' + provinceName : 'ทั้ง' + regionName);
-        return prefix ? prefix + (amphoeName || provinceName ? ' ' : '') + s : s;
+        var s = amphoeName ? 'อ.' + amphoeName : (provinceName ? 'จ.' + provinceName : (regionLabel || 'ทั้ง' + areaName));
+        return prefix ? prefix + (amphoeName || provinceName || regionLabel ? ' ' : '') + s : s;
     }
     function provinceInfo(code) {
         return (data.provinces || []).filter(function (p) { return p.code === code; })[0] || null;
+    }
+    function regionInfo(code) {
+        return (data.regions || []).filter(function (r) { return r.code === code; })[0] || null;
     }
     var firstFit = true;
     var $panel = $('#pubPanel');
@@ -100,10 +105,14 @@ $(function () {
         } else {
             // ยังไม่มีพื้นที่ — จัดจังหวัดที่เลือก (หรือทั้งภูมิภาค) ให้อยู่ในส่วนที่มองเห็น
             var p = provinceFilter ? provinceInfo(provinceFilter) : null;
+            var inRg = regionFilter ? (data.provinces || []).filter(function (x) { return x.region === regionFilter && x.lat; }) : [];
             if (p && p.lat) {
                 map.fitBounds(L.latLng(p.lat, p.lng).toBounds(90000), pad);
+            } else if (inRg.length) {
+                // ทั้งภาค: กรอบครอบจุดกลางทุกจังหวัดในภาค
+                map.fitBounds(L.latLngBounds(inRg.map(function (x) { return [x.lat, x.lng]; })).pad(0.15), pad);
             } else {
-                map.fitBounds(L.latLng(FloodMap.config.center).toBounds(provinceFilter ? 90000 : 260000), pad);
+                map.setView(FloodMap.config.center, FloodMap.config.zoom);
             }
         }
     }
@@ -898,7 +907,7 @@ $(function () {
 
     function reload() {
         nextIn = REFRESH_SEC;
-        Flood.get('api/zones', { amphoe: amphoeFilter, province: provinceFilter }, { silent: true }).then(function (o) {
+        Flood.get('api/zones', { amphoe: amphoeFilter, province: provinceFilter, region: regionFilter }, { silent: true }).then(function (o) {
             data.zones = o.zones || [];
             data.points = o.points || [];
             $('#pubUpdated').text(o.updated_th || '');
@@ -1014,7 +1023,7 @@ $(function () {
 
     $('#pubAmphoe').on('click', '.sk-chip', function () {
         var $b = $(this);
-        amphoeFilter = String($b.data('amphoe') || '');
+        amphoeFilter = String($b.attr('data-amphoe') || '');
         amphoeName = amphoeFilter ? $b.text() : '';
         $('#pubAmphoe .sk-chip').attr('aria-pressed', 'false');
         $b.attr('aria-pressed', 'true');
@@ -1022,39 +1031,91 @@ $(function () {
         reload();
     });
 
-    /* ---------- เลือกจังหวัด → แสดงอำเภอของจังหวัดนั้น ---------- */
-    function setProvince(code, silent) {
-        var p = code ? provinceInfo(code) : null;
-        provinceFilter = p ? p.code : '';
-        provinceName = p ? p.name : '';
-        amphoeFilter = '';
-        amphoeName = '';
-        $('#pubProvince .sk-chip').each(function () {
-            $(this).attr('aria-pressed', String(String($(this).attr('data-province') || '') === provinceFilter));
-        });
-        $('#pubAmphoe .sk-chip').attr('aria-pressed', 'false').filter('[data-amphoe=""]').attr('aria-pressed', 'true');
-        $('#pubAmphoe .sk-chip[data-pv]').each(function () {
-            this.hidden = $(this).attr('data-pv') !== provinceFilter;
-        });
-        if ($('#pubProvince').length) {
-            $('#pubAmphoe').prop('hidden', !provinceFilter);
+    /* ---------- ภาค → จังหวัด → อำเภอ ---------- */
+    function chip(attr, code, label, on) {
+        return '<button type="button" class="sk-chip" data-' + attr + '="' + esc(code) + '" aria-pressed="' + (on ? 'true' : 'false') + '">'
+            + esc(label) + '</button>';
+    }
+    function renderProvinceChips() {
+        var $w = $('#pubProvince');
+        if (!$w.length) {
+            return;
         }
-        $('#pubRegion').text(provinceName ? 'จ.' + provinceName : regionName);
-        // จำจังหวัดไว้ใน URL — แชร์ลิงก์แล้วเปิดตรงจังหวัดเดิม
+        var list = (data.provinces || []).filter(function (p) { return !regionFilter || p.region === regionFilter; });
+        var html = chip('province', '', regionFilter ? 'ทุกจังหวัด' : 'ทุกจังหวัด', !provinceFilter);
+        list.forEach(function (p) { html += chip('province', p.code, p.name, p.code === provinceFilter); });
+        $w.html(html);
+        // มีหลายภาค: แสดงแถวจังหวัดเมื่อเลือกภาคแล้ว (ทั้งประเทศ 77 ปุ่มยาวเกินไป)
+        $w.prop('hidden', !!$('#pubRegionChips').length && !regionFilter);
+    }
+    function renderAmphoeChips() {
+        var $w = $('#pubAmphoe');
+        if (!$('#pubProvince').length) {
+            return;   // จังหวัดเดียว — ปุ่มอำเภอสร้างจากเซิร์ฟเวอร์แล้ว
+        }
+        if (!provinceFilter) {
+            $w.empty().prop('hidden', true);
+            return;
+        }
+        var html = chip('amphoe', '', 'ทุกอำเภอ', !amphoeFilter);
+        (data.amphoes || []).forEach(function (a) {
+            if (String(a[0]).substring(0, 2) === provinceFilter) {
+                html += chip('amphoe', a[0], a[1], a[0] === amphoeFilter);
+            }
+        });
+        $w.html(html).prop('hidden', false);
+    }
+    function syncUrl() {
+        // จำภาค/จังหวัดไว้ใน URL — แชร์ลิงก์แล้วเปิดตรงที่เดิม
         try {
             var u = new URL(window.location.href);
+            u.searchParams.delete('region');
+            u.searchParams.delete('province');
             if (provinceFilter) {
                 u.searchParams.set('province', provinceFilter);
-            } else {
-                u.searchParams.delete('province');
+            } else if (regionFilter) {
+                u.searchParams.set('region', regionFilter);
             }
             window.history.replaceState(window.history.state, '', u.toString());
         } catch (e) { /* เบราว์เซอร์เก่า */ }
+    }
+    function applyArea(silent) {
+        amphoeFilter = '';
+        amphoeName = '';
+        $('#pubRegionChips .sk-chip').each(function () {
+            $(this).attr('aria-pressed', String(String($(this).attr('data-region') || '') === regionFilter));
+        });
+        renderProvinceChips();
+        renderAmphoeChips();
+        $('#pubRegion').text(provinceName ? 'จ.' + provinceName : (regionLabel || areaName));
+        syncUrl();
         if (!silent) {
             firstFit = true;
             reload();
         }
     }
+    function setRegion(code, silent) {
+        var r = code ? regionInfo(code) : null;
+        regionFilter = r ? r.code : '';
+        regionLabel = r ? r.name : '';
+        provinceFilter = '';
+        provinceName = '';
+        applyArea(silent);
+    }
+    function setProvince(code, silent) {
+        var p = code ? provinceInfo(code) : null;
+        provinceFilter = p ? p.code : '';
+        provinceName = p ? p.name : '';
+        if (p && p.region) {
+            var r = regionInfo(p.region);
+            regionFilter = r ? r.code : regionFilter;
+            regionLabel = r ? r.name : regionLabel;
+        }
+        applyArea(silent);
+    }
+    $('#pubRegionChips').on('click', '.sk-chip', function () {
+        setRegion(String($(this).attr('data-region') || ''));
+    });
     $('#pubProvince').on('click', '.sk-chip', function () {
         setProvince(String($(this).attr('data-province') || ''));
     });
@@ -1066,6 +1127,10 @@ $(function () {
     renderAll();
     if (data.province) {
         setProvince(data.province);   // เปิดจากลิงก์ ?province=27
+    } else if (data.region) {
+        setRegion(data.region);       // ?region=east
+    } else {
+        renderProvinceChips();
     }
 
     // ลิงก์ตรงถึงพื้นที่ (#zone-12) — ส่งต่อในไลน์แล้วเปิดมาที่รายละเอียดเลย

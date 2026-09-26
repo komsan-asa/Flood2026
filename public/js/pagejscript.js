@@ -183,70 +183,114 @@
     };
 
     /*
-     * จังหวัด → อำเภอ: <select data-pv-for="idของselectอำเภอ"> (สร้างด้วย flood_province_select())
-     * เลือกจังหวัดแล้วรายการอำเภอเหลือเฉพาะจังหวัดนั้น · เลือกอำเภอก่อน → ตั้งจังหวัดให้เอง
-     * อำเภอที่เลือกไว้ไม่อยู่ในจังหวัดใหม่ → ล้างค่า แล้วส่ง change ต่อ (ให้รายการตำบลอัปเดต)
+     * ตัวเลือกแบบลำดับชั้น ภาค → จังหวัด → อำเภอ
+     *   <select data-rg-for="idของselectจังหวัด">  (flood_region_select)   — ตัวเลือกลูกมี data-rg
+     *   <select data-pv-for="idของselectอำเภอ">    (flood_province_select) — ตัวเลือกลูกมี data-pv
+     * เลือกตัวบน → ตัวล่างเหลือเฉพาะที่อยู่ในนั้น (ค่าเดิมไม่อยู่แล้ว = ล้าง แล้วส่ง change ต่อ)
+     * เลือกตัวล่างก่อน → ตั้งตัวบนให้เอง
      */
-    Flood.bindProvince = function (pvSel) {
-        var $pv = $(pvSel);
-        var $am = $('#' + $pv.data('pvFor'));
-        if (!$am.length || $pv.data('pvBound')) {
+    Flood.bindCascade = function (parentSel, attr) {
+        var $p = $(parentSel);
+        var $c = $('#' + $p.attr('data-' + attr + '-for'));
+        if (!$c.length || $p.data('cascadeBound')) {
             return;
         }
-        $pv.data('pvBound', true);
-        var $all = $am.children().clone();   // ตัวเลือกทั้งหมด (รวม optgroup) เก็บไว้สร้างใหม่
+        $p.data('cascadeBound', true);
+        var $all = $c.children().clone();   // ตัวเลือกทั้งหมด (รวม optgroup) เก็บไว้สร้างใหม่
         function rebuild() {
-            var pv = String($pv.val() || '');
-            var cur = String($am.val() || '');
-            $am.empty();
+            var v = String($p.val() || '');
+            var cur = String($c.val() || '');
+            $c.empty();
             $all.each(function () {
-                var $o = $(this);
-                var code = String($o.data('pv') || '');
-                if (!pv || !code || code === pv) {
-                    $am.append($o.clone());
+                var code = String($(this).attr('data-' + attr) || '');
+                if (!v || !code || code === v) {
+                    $c.append($(this).clone());
                 }
             });
-            if ($am.find('option').filter(function () { return this.value === cur; }).length) {
-                $am.val(cur);
-            } else {
-                $am.val('');
-                return cur !== '';   // ค่าเดิมหายไป
-            }
-            return false;
+            var ok = $c.find('option').filter(function () { return this.value === cur; }).length > 0;
+            $c.val(ok ? cur : '');
+            return !ok && cur !== '';
         }
-        $pv.on('change', function () {
+        $c.data('cascadeRebuild', rebuild);
+        $p.on('change', function () {
             if (rebuild()) {
-                $am.trigger('change');
+                $c.trigger('change');
             }
         });
-        $am.on('change', function () {
-            var pv = String($am.find('option:selected').data('pv') || '');
-            if (pv && String($pv.val() || '') !== pv) {
-                $pv.val(pv);
+        // ตัวล่างเปลี่ยน → ตั้งตัวบน (และตัวบนของตัวบน) ให้ตรง โดยไม่ล้างค่าของตัวล่าง
+        $c.on('change cascade:sync', function () {
+            var v = String($c.find('option:selected').attr('data-' + attr) || '');
+            if (v && String($p.val() || '') !== v) {
+                $p.val(v);
                 rebuild();
+                $p.trigger('cascade:sync');   // ตัวบนของตัวบน (ภาค) ปรับตามต่อ
             }
         });
-        // โหลดหน้า: ตั้งจังหวัดตามอำเภอที่เลือกไว้แล้ว
-        var pv0 = String($am.find('option:selected').data('pv') || '');
-        if (pv0 && !$pv.val()) {
-            $pv.val(pv0);
+        var v0 = String($c.find('option:selected').attr('data-' + attr) || '');
+        if (v0 && !$p.val()) {
+            $p.val(v0);
+            $p.trigger('cascade:sync');
         }
         rebuild();
     };
+    Flood.bindProvince = function (pvSel) { Flood.bindCascade(pvSel, 'pv'); };
 
-    /** ตั้งค่า select อำเภอจากโค้ด (เช่นตอนเปิดฟอร์มแก้ไข) — ปรับ select จังหวัดที่ผูกไว้ให้ตรงก่อน */
+    /** ตั้งค่า select อำเภอจากโค้ด (เช่นตอนเปิดฟอร์มแก้ไข) — ปรับ select จังหวัด/ภาคที่ผูกไว้ให้ตรงก่อน */
     Flood.setAmphoe = function (amSel, code) {
         var $am = $(amSel);
         var $pv = $('select[data-pv-for="' + $am.attr('id') + '"]');
         code = String(code || '');
         if ($pv.length) {
+            var $rg = $('select[data-rg-for="' + $pv.attr('id') + '"]');
+            if ($rg.length) {
+                $rg.val('').trigger('change');
+            }
             $pv.val(code ? code.substring(0, 2) : '').trigger('change');
+            if (code) {
+                $pv.trigger('cascade:sync');
+            }
         }
         $am.val(code);
     };
 
+    /*
+     * ตำบล — ทั้งประเทศมีหลายพันตำบล จึงโหลดทีละอำเภอจาก api/tambons แล้วเก็บไว้ในรายการกลาง
+     *   var tambons = Flood.tambonList(ข้อมูลที่หน้าเว็บส่งมา);
+     *   Flood.loadTambons(amphoe).always(function () { ...ใช้ tambons... });
+     */
+    var tbList = [];
+    var tbLoaded = {};
+    var tbPending = {};
+    var tbSeen = {};
+    function tbAdd(t) {
+        if (t && t.tambon_code && !tbSeen[t.tambon_code]) {
+            tbSeen[t.tambon_code] = true;
+            tbList.push(t);
+        }
+    }
+    Flood.tambonList = function (seed) {
+        (seed || []).forEach(tbAdd);
+        return tbList;
+    };
+    Flood.loadTambons = function (amphoe) {
+        amphoe = String(amphoe || '');
+        if (!amphoe || tbLoaded[amphoe]) {
+            return $.Deferred().resolve(tbList).promise();
+        }
+        if (!tbPending[amphoe]) {
+            tbPending[amphoe] = $.ajax({ url: Flood.url('api/tambons'), data: { amphoe: amphoe }, dataType: 'json' })
+                .done(function (o) {
+                    (o && o.tambons || []).forEach(tbAdd);
+                    tbLoaded[amphoe] = true;
+                })
+                .always(function () { delete tbPending[amphoe]; });
+        }
+        return tbPending[amphoe];
+    };
+
     $(function () {
-        $('select[data-pv-for]').each(function () { Flood.bindProvince(this); });
+        $('select[data-rg-for]').each(function () { Flood.bindCascade(this, 'rg'); });
+        $('select[data-pv-for]').each(function () { Flood.bindCascade(this, 'pv'); });
     });
 
 })(window, jQuery);

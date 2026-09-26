@@ -5,7 +5,7 @@ $counts = $this->zoneCounts;
 $levels = flood_zone_levels();
 $sources = flood_zone_sources();
 $tabLink = function ($status) use ($f) {
-    return URL . 'flood/zones?' . http_build_query(array('status' => $status, 'level' => $f['level'], 'province' => $f['province'], 'amphoe' => $f['amphoe'], 'q' => $f['q']));
+    return URL . 'flood/zones?' . http_build_query(array('status' => $status, 'level' => $f['level'], 'region' => $f['region'], 'province' => $f['province'], 'amphoe' => $f['amphoe'], 'q' => $f['q']));
 };
 ?>
 <div class="flood-page-header">
@@ -40,7 +40,8 @@ $tabLink = function ($status) use ($f) {
 <form class="filter-bar" method="get" action="<?= URL ?>flood/zones" style="margin-bottom:12px">
     <input type="hidden" name="status" value="<?= h($f['status']) ?>" />
     <select name="level" class="form-control"><?= flood_options($levels, $f['level'], 'ทุกระดับ') ?></select>
-    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'data-pv-for' => 'fbAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
+    <?= flood_region_select($this->regions, array('name' => 'region', 'class' => 'form-control', 'data-rg-for' => 'fbProvince', 'aria-label' => 'ภาค'), $f['region'] ?? '', 'ทุกภาค') ?>
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'id' => 'fbProvince', 'class' => 'form-control', 'data-pv-for' => 'fbAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
     <select name="amphoe" class="form-control" id="fbAmphoe">
         <option value="">ทุกอำเภอ</option>
         <?= flood_amphoe_options($this->amphoes, $f['amphoe'], 'อ.') ?>

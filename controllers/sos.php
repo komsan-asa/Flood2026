@@ -22,7 +22,8 @@ class Sos extends Controller {
         $this->view->pageTitle = 'ขอความช่วยเหลือ';
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
-        $this->view->tambons = $this->model->getTambons();
+        $this->view->regions = $this->model->getRegions();
+        $this->view->tambons = array();   // ตำบลโหลดทีละอำเภอผ่าน api/tambons
         $this->view->rander('sos/index');
     }
 

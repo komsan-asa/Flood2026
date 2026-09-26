@@ -128,3 +128,5 @@
 .sk-chips.sk-chips-pv { margin-bottom: 8px; }
 .sk-chips-pv .sk-chip[aria-pressed="true"] { font-weight: 700; }
 .sk-chips .sk-chip[hidden] { display: none !important; }
+.sk-chips.sk-chips-rg { margin-bottom: 8px; }
+.sk-chips-rg .sk-chip[aria-pressed="true"] { font-weight: 700; }

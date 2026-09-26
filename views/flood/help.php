@@ -58,7 +58,8 @@ $tab = function ($s) use ($f) {
     <input type="hidden" name="status" value="<?= h($f['status']) ?>" />
     <select name="priority" class="form-control"><?= flood_options($pr, $f['priority'], 'ทุกความเร่งด่วน') ?></select>
     <select name="need" class="form-control"><?= flood_options($needs, $f['need'], 'ทุกเรื่อง') ?></select>
-    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'data-pv-for' => 'fbAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
+    <?= flood_region_select($this->regions, array('name' => 'region', 'class' => 'form-control', 'data-rg-for' => 'fbProvince', 'aria-label' => 'ภาค'), $f['region'] ?? '', 'ทุกภาค') ?>
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'id' => 'fbProvince', 'class' => 'form-control', 'data-pv-for' => 'fbAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
     <select name="amphoe" class="form-control" id="fbAmphoe">
         <option value="">ทุกอำเภอ</option>
         <?= flood_amphoe_options($this->amphoes, $f['amphoe'], 'อ.') ?>

@@ -372,6 +372,7 @@ class Flood extends Controller {
         $filters = array(
             'status' => $status,
             'level' => flood_in('level', '', $_GET),
+            'region' => flood_region_param(),
             'province' => flood_province_param(),
             'amphoe' => flood_in('amphoe', '', $_GET),
             'q' => flood_in('q', '', $_GET),
@@ -384,6 +385,7 @@ class Flood extends Controller {
         $this->view->zoneCounts = $this->model->zoneCounts();
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
+        $this->view->regions = $this->model->getRegions();
         $this->view->canEdit = $this->isOfficer();
         $this->view->canImport = $this->isAdmin();
         $this->view->activeTab = 'zones';
@@ -441,7 +443,8 @@ class Flood extends Controller {
         $this->view->pendingReports = $this->model->pendingReportsForMap(200);
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
-        $this->view->tambons = $this->model->getTambons();
+        $this->view->regions = $this->model->getRegions();
+        $this->view->tambons = array();   // ตำบลโหลดทีละอำเภอผ่าน api/tambons
         $this->view->activeTab = 'zones';
         $this->view->pageTitle = $zone ? 'แก้ไขพื้นที่ประกาศ' : 'ประกาศพื้นที่ใหม่';
         $this->view->autoRefresh = false;   // หน้าฟอร์ม: ไม่รีเฟรชเอง กันข้อมูลที่กรอกหาย
@@ -864,8 +867,9 @@ class Flood extends Controller {
         $impact = flood_in('impact', '', $_GET);
         $filters = array('status' => $status, 'q' => flood_in('q', '', $_GET),
             'impact' => array_key_exists($impact, flood_area_impacts()) ? $impact : '',
-            'province' => flood_province_param());
+            'province' => flood_province_param(), 'region' => flood_region_param());
         $this->view->provinces = $this->model->getProvinces();
+        $this->view->regions = $this->model->getRegions();
         $this->useMap();
         $this->view->js[] = 'flood/js/reports.js';
         $this->view->reportFilters = $filters;
@@ -1074,6 +1078,7 @@ class Flood extends Controller {
         $this->view->noticeCanEdit = $this->isOfficer();
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
+        $this->view->regions = $this->model->getRegions();
         $this->view->activeTab = 'notices';
         $this->view->pageTitle = 'ข้อมูลที่ควรรู้';
         $this->view->rander('flood/notices');
@@ -1115,6 +1120,7 @@ class Flood extends Controller {
             flood_json(array('chk' => false, 'msg' => 'คำสั่งไม่ถูกต้อง'));
         }
         $msgs = array('verified' => 'ยืนยันข้อมูลแล้ว', 'unverified' => 'เปลี่ยนเป็นยังไม่ยืนยัน', 'archived' => 'เก็บข้อมูลแล้ว',
+            'announced' => 'ประกาศให้ประชาชนเห็นแล้ว (ป้าย "รอตรวจสอบ")',
             'active' => 'นำกลับมาใช้แล้ว');
         if ($field === 'is_public') {
             flood_json(array('chk' => true, 'msg' => $value
@@ -1134,6 +1140,7 @@ class Flood extends Controller {
         $filters = array(
             'status' => $status,
             'priority' => flood_in('priority', '', $_GET),
+            'region' => flood_region_param(),
             'province' => flood_province_param(),
             'amphoe' => flood_in('amphoe', '', $_GET),
             'need' => flood_in('need', '', $_GET),
@@ -1153,6 +1160,7 @@ class Flood extends Controller {
         $this->view->teams = $this->model->getTeams(true);
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
+        $this->view->regions = $this->model->getRegions();
         $this->view->isTeam = $isTeam;
         $this->view->canCreate = $this->isOfficer();
         $this->view->activeTab = 'help';
@@ -1168,7 +1176,8 @@ class Flood extends Controller {
         $this->view->js[] = 'flood/js/help_form.js';
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
-        $this->view->tambons = $this->model->getTambons();
+        $this->view->regions = $this->model->getRegions();
+        $this->view->tambons = array();   // ตำบลโหลดทีละอำเภอผ่าน api/tambons
         $this->view->activeTab = 'help';
         $this->view->pageTitle = 'รับเรื่องขอความช่วยเหลือ';
         $this->view->autoRefresh = false;   // หน้าฟอร์ม: ไม่รีเฟรชเอง กันข้อมูลที่กรอกหาย
@@ -1373,6 +1382,7 @@ class Flood extends Controller {
         $this->requireMenu('vulnerable');
         $filters = array(
             'q' => flood_in('q', '', $_GET),
+            'region' => flood_region_param(),
             'province' => flood_province_param(),
             'amphoe' => flood_in('amphoe', '', $_GET),
             'tambon' => flood_in('tambon', '', $_GET),
@@ -1389,7 +1399,8 @@ class Flood extends Controller {
         $this->view->activeZones = array_map(array($this->model, 'zoneForMap'), $this->model->listZones(array('status' => 'active')));
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
-        $this->view->tambons = $this->model->getTambons();
+        $this->view->regions = $this->model->getRegions();
+        $this->view->tambons = array();   // ตำบลโหลดทีละอำเภอผ่าน api/tambons
         $this->view->activeTab = 'vulnerable';
         $this->view->pageTitle = 'ทะเบียนกลุ่มเปราะบาง';
         $this->view->rander('flood/vulnerable');
@@ -1411,7 +1422,8 @@ class Flood extends Controller {
         $this->view->activeZones = array_map(array($this->model, 'zoneForMap'), $this->model->listZones(array('status' => 'active')));
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
-        $this->view->tambons = $this->model->getTambons();
+        $this->view->regions = $this->model->getRegions();
+        $this->view->tambons = array();   // ตำบลโหลดทีละอำเภอผ่าน api/tambons
         $this->view->activeTab = 'vulnerable';
         $this->view->pageTitle = $person ? 'แก้ไขข้อมูล ' . $person['name'] : 'เพิ่มในทะเบียนกลุ่มเปราะบาง';
         $this->view->autoRefresh = false;   // หน้าฟอร์ม: ไม่รีเฟรชเอง กันข้อมูลที่กรอกหาย
@@ -1555,6 +1567,7 @@ class Flood extends Controller {
         $this->view->teamRows = $this->model->getTeams(false);
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
+        $this->view->regions = $this->model->getRegions();
         $this->view->activeTab = 'teams';
         $this->view->pageTitle = 'ทีมช่วยเหลือ';
         $this->view->rander('flood/teams');

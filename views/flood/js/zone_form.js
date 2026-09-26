@@ -185,18 +185,23 @@ $(function () {
     });
 
     /* ---------- อำเภอ/ตำบล ---------- */
-    var tambons = cfg.tambons || [];
+    var tambons = Flood.tambonList(cfg.tambons);   // โหลดเพิ่มทีละอำเภอ
     function fillTambons(selected) {
         var a = $('#zAmphoe').val();
-        var $t = $('#zTambon').empty().append('<option value="">—</option>');
-        tambons.forEach(function (t) {
-            if (!a || t.amphoe_code === a) {
-                $t.append($('<option>').val(t.tambon_code).text(t.name + (a ? '' : ' (' + t.amphoe_code + ')')));
+        var $t = $('#zTambon').empty().append('<option value="">' + (a ? '—' : '— เลือกอำเภอก่อน —') + '</option>');
+        Flood.loadTambons(a).always(function () {
+            if (($('#zAmphoe').val() || '') !== (a || '')) {
+                return;
+            }
+            tambons.forEach(function (t) {
+                if (a && t.amphoe_code === a) {
+                    $t.append($('<option>').val(t.tambon_code).text(t.name));
+                }
+            });
+            if (selected) {
+                $t.val(selected);
             }
         });
-        if (selected) {
-            $t.val(selected);
-        }
     }
     $('#zAmphoe').on('change', function () { fillTambons(''); });
     $('#zTambon').on('change', function () {
