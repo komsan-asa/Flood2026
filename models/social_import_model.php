@@ -89,7 +89,23 @@ class Social_Import_Model extends Model {
         if ($u === '' || !preg_match('#^https://(www\.|m\.)?(facebook\.com|fb\.watch|fb\.com)/#i', $u)) {
             return null;
         }
-        return mb_substr(preg_replace('/[?#].*$/', '', $u), 0, 500);
+        // ตัด query ที่เป็นตัวติดตาม (__cft__, __tn__ …) ออก แต่ลิงก์แบบ permalink.php / photo / story.php / watch
+        // ต้องเก็บพารามิเตอร์ที่บอกว่าเป็นโพสต์ไหนไว้ ไม่งั้นลิงก์เปิดไม่ได้
+        $path = (string) parse_url($u, PHP_URL_PATH);
+        $base = preg_replace('/[?#].*$/', '', $u);
+        if (preg_match('#^/(permalink\.php|story\.php|photo\.php|photo/?|watch/?)$#', $path)) {
+            parse_str((string) parse_url($u, PHP_URL_QUERY), $q);
+            $keep = array();
+            foreach (array('story_fbid', 'id', 'fbid', 'set', 'v') as $k) {
+                if (isset($q[$k]) && is_string($q[$k]) && $q[$k] !== '') {
+                    $keep[$k] = $q[$k];
+                }
+            }
+            if ($keep) {
+                $base .= '?' . http_build_query($keep);
+            }
+        }
+        return mb_substr($base, 0, 500);
     }
 
     private $noticeModel = null;

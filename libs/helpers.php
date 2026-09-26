@@ -381,6 +381,7 @@ function flood_zone_sources() {
         'ddpm' => 'ประกาศ ปภ.',
         'report' => 'จากรายงานประชาชน',
         'arankub' => 'นำเข้าจาก arankub.com',
+        'web' => 'ข่าว/โซเชียล (รอตรวจสอบ)',
     );
 }
 

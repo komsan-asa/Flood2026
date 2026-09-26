@@ -228,9 +228,30 @@
         return layer;
     };
 
+    /** ข้อความพื้นที่ ต./อ. (กรุงเทพฯ ใช้ แขวง/เขต) — คืนข้อความดิบ ให้ผู้เรียก esc เอง */
+    FloodMap.areaLabel = function (z) {
+        var bkk = String(z.amphoe_code || '').indexOf('10') === 0;
+        return ((z.tambon_name ? (bkk ? 'แขวง' : 'ต.') + z.tambon_name + ' ' : '')
+            + (z.amphoe_name ? (bkk ? (String(z.amphoe_name).indexOf('เขต') === 0 ? '' : 'เขต') : 'อ.') + z.amphoe_name : '')).trim();
+    };
+
+    /** หมายเหตุพื้นที่ → HTML ที่ escape แล้ว และเปลี่ยน URL เป็นลิงก์ "เปิดแหล่งข่าว" */
+    FloodMap.linkNote = function (s) {
+        var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return map[c]; })
+            .replace(/https?:\/\/[^\s<>"']+/g, function (u) {
+                return '<a href="' + u + '" target="_blank" rel="noopener nofollow">เปิดแหล่งข่าว ↗</a>';
+            });
+    };
+
+    /** ป้ายพื้นที่ที่นำเข้าจากข่าว/โซเชียล (ยังไม่ตรวจสอบ) */
+    FloodMap.pendingTag = function (z) {
+        return z && z.source === 'web' ? ' <span class="sk-tag-pending">⏳ รอตรวจสอบ</span>' : '';
+    };
+
     FloodMap.zonePopup = function (z, opts) {
         var lv = FloodMap.level(z.level);
-        var area = (z.tambon_name ? 'ต.' + esc(z.tambon_name) + ' ' : '') + (z.amphoe_name ? 'อ.' + esc(z.amphoe_name) : '');
+        var area = esc(FloodMap.areaLabel(z));
         var photos = zonePhotos(z);
         var html = '';
         if (photos.length) {
@@ -243,9 +264,9 @@
                 + '</span></button>';
         }
         html += '<div class="pop-title">' + esc(z.name) + '</div>'
-            + '<span class="lv-badge lv-' + esc(z.level) + '" style="background:' + esc(lv.badge || '#475569') + '">' + esc(lv.name) + '</span>'
+            + '<span class="lv-badge lv-' + esc(z.level) + '" style="background:' + esc(lv.badge || '#475569') + '">' + esc(lv.name) + '</span>' + FloodMap.pendingTag(z)
             + (area ? '<div class="small-muted" style="margin-top:4px">' + area + '</div>' : '')
-            + (z.note ? '<div style="margin-top:4px">' + esc(z.note) + '</div>' : '')
+            + (z.note ? '<div class="fm-note" style="margin-top:4px">' + FloodMap.linkNote(z.note) + '</div>' : '')
             + (z.started_th ? '<div class="small-muted" style="margin-top:4px">ประกาศ ' + esc(z.started_th) + '</div>' : '');
         if (opts && typeof opts.extraHtml === 'function') {
             html += opts.extraHtml(z);

@@ -1053,6 +1053,29 @@ class Flood extends Controller {
                 . ($res['errors'] ? ' · ไม่สำเร็จ ' . count($res['errors']) : '')));
     }
 
+    /**
+     * นำเข้าสรุปสถานการณ์ทั่วประเทศรายวัน (kind=day) และพื้นที่รายอำเภอจากข่าว/โซเชียล (kind=zone)
+     * POST items = JSON · พื้นที่ที่สร้างมีที่มา web แสดงป้าย "รอตรวจสอบ" บนแผนที่ · เจ้าหน้าที่ศูนย์ขึ้นไป
+     */
+    function sitrepImport() {
+        $this->requireMenu('zones', true);
+        $this->requireOfficer(true);
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $items = json_decode(flood_in('items', '', $_POST), true);
+        if (!is_array($items) || !$items) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่มีรายการที่จะนำเข้า'));
+        }
+        require_once 'models/sitrep_model.php';
+        $sm = new Sitrep_Model();
+        $res = $sm->import($items, $this->user(), $this->model);
+        flood_json(array('chk' => empty($res['errors']) || !empty($res['created']) || !empty($res['updated']), 'result' => $res,
+            'msg' => 'บันทึกใหม่ ' . count($res['created']) . ' · แก้ไข ' . count($res['updated'])
+                . ($res['skipped'] ? ' · ข้าม ' . count($res['skipped']) : '')
+                . ($res['errors'] ? ' · ไม่สำเร็จ ' . count($res['errors']) : '')));
+    }
+
     /* ==================== ข้อมูลที่ควรรู้ (ไม่ใช่จุดน้ำท่วม) ==================== */
 
     private function noticeModel() {

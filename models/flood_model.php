@@ -684,6 +684,8 @@ class Flood_Model extends Model {
             'polygon' => $z['shape'] === 'polygon' ? flood_parse_polygon($z['polygon_json']) : null,
             'amphoe_name' => isset($z['amphoe_name']) ? $z['amphoe_name'] : null,
             'tambon_name' => isset($z['tambon_name']) ? $z['tambon_name'] : null,
+            'amphoe_code' => isset($z['amphoe_code']) ? $z['amphoe_code'] : null,
+            'source' => isset($z['source']) ? $z['source'] : '',   // web = จากข่าว/โซเชียล ยังไม่ตรวจสอบ
             'note' => $z['note'],
             'status' => isset($z['status']) ? $z['status'] : 'active',
             'started_at' => $z['started_at'],

@@ -56,7 +56,7 @@ $jsRows = array();
             <span class="notice-cat"><i class="fa <?= h($cat['icon']) ?>"></i> <?= h($cat['name']) ?></span>
             <span class="label <?= h($v['class']) ?>"><i class="fa <?= h($v['icon']) ?>"></i> <?= h($v['name']) ?></span>
             <?php $pub = !isset($n['is_public']) || (int) $n['is_public'] === 1; ?>
-            <?php if ($pub && $n['verify'] === 'verified' && $n['status'] === 'active') { ?>
+            <?php if ($pub && in_array($n['verify'], array('verified', 'announced'), true) && $n['status'] === 'active') { ?>
             <span class="notice-vis on" title="แสดงบนแผนที่ประชาชน"><i class="fa fa-globe"></i> ประชาชนเห็น</span>
             <?php } else { ?>
             <span class="notice-vis" title="<?= $pub ? 'จะแสดงให้ประชาชนเมื่อยืนยันแล้ว' : 'ซ่อนจากประชาชน' ?>"><i class="fa fa-lock"></i> เฉพาะเจ้าหน้าที่</span>
@@ -76,6 +76,7 @@ $jsRows = array();
             <span class="notice-actions">
                 <?php if ($n['status'] === 'active') { ?>
                 <?php if ($n['verify'] !== 'verified') { ?><button type="button" class="btn btn-success btn-xs js-notice-set" data-id="<?= (int) $n['notice_id'] ?>" data-field="verify" data-value="verified" title="เช็กกับหน่วยงานแล้ว"><i class="fa fa-check"></i> ยืนยัน</button><?php } ?>
+                <?php if ($n['verify'] === 'unverified') { ?><button type="button" class="btn btn-info btn-xs js-notice-set" data-id="<?= (int) $n['notice_id'] ?>" data-field="verify" data-value="announced" title="ให้ประชาชนเห็นทันที พร้อมป้าย &quot;รอตรวจสอบ&quot;"><i class="fa fa-bullhorn"></i> ประกาศก่อน (รอตรวจสอบ)</button><?php } ?>
                 <button type="button" class="btn btn-default btn-xs js-notice-set" data-id="<?= (int) $n['notice_id'] ?>" data-field="is_pinned" data-value="<?= (int) $n['is_pinned'] ? 0 : 1 ?>"><i class="fa fa-thumb-tack"></i> <?= (int) $n['is_pinned'] ? 'เลิกปัก' : 'ปักหมุด' ?></button>
                 <button type="button" class="btn btn-default btn-xs js-notice-set" data-id="<?= (int) $n['notice_id'] ?>" data-field="is_public" data-value="<?= $pub ? 0 : 1 ?>"><i class="fa <?= $pub ? 'fa-eye-slash' : 'fa-globe' ?>"></i> <?= $pub ? 'ซ่อนจากประชาชน' : 'ให้ประชาชนเห็น' ?></button>
                 <button type="button" class="btn btn-default btn-xs js-notice-edit" data-id="<?= (int) $n['notice_id'] ?>"><i class="fa fa-pencil"></i> แก้ไข</button>
@@ -111,6 +112,7 @@ $jsRows = array();
                         <label for="nVerify">สถานะข้อมูล</label>
                         <select class="form-control" id="nVerify" name="verify">
                             <option value="unverified">ยังไม่ยืนยัน</option>
+                            <option value="announced">ประกาศแล้ว · รอตรวจสอบ (ประชาชนเห็นพร้อมป้าย)</option>
                             <option value="verified">ยืนยันแล้ว</option>
                         </select>
                     </div></div>
@@ -159,7 +161,8 @@ $jsRows = array();
                         <input type="url" class="form-control" id="nSrcUrl" name="source_url" maxlength="500" placeholder="https://" />
                     </div></div>
                 </div>
-                <div class="checkbox"><label><input type="checkbox" id="nPinned" /> ปักหมุดไว้บนสุด และแสดงในหน้าภาพรวม</label></div>
+                <div class="checkbox"><label><input type="checkbox" id="nPinned" /> ปักหมุดไว้บนสุดในหน้าเจ้าหน้าที่ และแสดงในหน้าภาพรวม</label>
+                    <div class="small-muted">หน้าประชาชนเรียงข่าวล่าสุดไว้บนเสมอ — รายการที่ปักหมุดจะมีป้าย "📌 ปักหมุด"</div></div>
                 <div class="checkbox" style="margin-top:0"><label><input type="checkbox" id="nPublic" checked /> แสดงให้ประชาชนเห็นบนแผนที่สาธารณะ</label>
                     <div class="small-muted">ขึ้นหน้าประชาชนเฉพาะข้อมูลที่ "ยืนยันแล้ว" เท่านั้น — ข่าวที่ยังไม่ยืนยันเจ้าหน้าที่เห็นอย่างเดียว</div></div>
             </div>

@@ -14,6 +14,7 @@ $ddpm = flood_ddpm_phone();
 <nav class="ab-nav">
     <a href="<?= URL ?>" class="ab-back"><i class="fa fa-map" aria-hidden="true"></i> แผนที่สถานการณ์</a>
     <span class="ab-nav-r">
+        <a href="<?= URL ?>index/situation" class="ab-link">สถานการณ์ทั่วประเทศ</a>
         <a href="<?= URL ?>report" class="ab-link">แจ้งจุดน้ำท่วม</a>
         <a href="<?= URL ?>login" class="ab-link">เจ้าหน้าที่</a>
     </span>

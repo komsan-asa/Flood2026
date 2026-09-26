@@ -98,4 +98,56 @@ class Index extends Controller {
         $this->view->rander('index/about');
     }
 
+    /** สถานการณ์อุทกภัยทั่วประเทศรายวัน (สาธารณะ) — ตั้งแต่ 22 ก.ย. 2569 · ?d=YYYY-MM-DD เลือกวันของตารางรายจังหวัด */
+    function situation() {
+        if (!$this->model) {
+            $this->loadModel('flood');
+        }
+        $from = '2026-09-22';
+        $this->view->sitFrom = $from;
+        $this->view->sitDays = array();
+        $this->view->sitRows = array();
+        $this->view->sitDates = array();
+        $this->view->sitDate = null;
+        $this->view->sitZoneCounts = array();
+        $this->view->sitPrevDate = null;
+        $this->view->sitPrevRows = array();
+        try {
+            require_once 'models/sitrep_model.php';
+            $sm = new Sitrep_Model();
+            $dates = array();
+            foreach ($sm->provinceDates() as $d => $n) {
+                if ($d >= $from) {
+                    $dates[$d] = $n;
+                }
+            }
+            $keys = array_keys($dates);
+            $date = $keys ? end($keys) : null;
+            $want = flood_in('d', '', $_GET);
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $want) && isset($dates[$want])) {
+                $date = $want;
+            }
+            $this->view->sitDays = $sm->nationalDays($from);
+            $this->view->sitDates = $dates;
+            $this->view->sitDate = $date;
+            $this->view->sitRows = $date ? $sm->provinceRows($date) : array();
+            // รายงานก่อนหน้า — ใช้แสดงตัวเลขเมื่อรายงานวันที่เลือกมีแค่แนวโน้ม
+            $i = $date ? array_search($date, $keys, true) : false;
+            if ($i) {
+                $this->view->sitPrevDate = $keys[$i - 1];
+                $this->view->sitPrevRows = $sm->provinceRows($keys[$i - 1]);
+            }
+            $this->view->sitZoneCounts = $sm->webZoneCounts();
+        } catch (Exception $e) {
+            error_log('[flood] situation: ' . $e->getMessage());
+        }
+        $this->view->useMap = false;
+        $this->view->css = array('index/css/situation.css');
+        $this->view->js = array();
+        $this->view->noNavbar = true;
+        $this->view->bodyClass = 'sk-situation-body';
+        $this->view->pageTitle = 'สถานการณ์ทั่วประเทศ';
+        $this->view->rander('index/situation');
+    }
+
 }

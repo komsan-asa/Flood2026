@@ -24,6 +24,8 @@ if (!function_exists('flood_notice_verify_options')) {
     function flood_notice_verify_options() {
         return array(
             'unverified' => array('name' => 'ยังไม่ยืนยัน', 'class' => 'label-warning', 'icon' => 'fa-question-circle'),
+            // ประกาศให้ประชาชนเห็นก่อน พร้อมป้าย "รอตรวจสอบ" — เจ้าหน้าที่กด "ยืนยัน" ภายหลัง
+            'announced' => array('name' => 'ประกาศแล้ว · รอตรวจสอบ', 'class' => 'label-info', 'icon' => 'fa-bullhorn'),
             'verified' => array('name' => 'ยืนยันแล้ว', 'class' => 'label-success', 'icon' => 'fa-check-circle'),
         );
     }
@@ -130,7 +132,7 @@ class Notice_Model extends Model {
             return 'กรุณาใส่หัวข้อ';
         }
         $cat = isset($src['category']) && array_key_exists($src['category'], flood_notice_categories()) ? $src['category'] : 'other';
-        $verify = isset($src['verify']) && $src['verify'] === 'verified' ? 'verified' : 'unverified';
+        $verify = isset($src['verify']) && in_array($src['verify'], array('verified', 'announced'), true) ? $src['verify'] : 'unverified';
         $amphoe = isset($src['amphoe_code']) ? preg_replace('/[^0-9]/', '', (string) $src['amphoe_code']) : '';
         $url = trim(isset($src['source_url']) ? (string) $src['source_url'] : '');
         if ($url !== '' && !preg_match('#^https?://#i', $url)) {
@@ -169,7 +171,7 @@ class Notice_Model extends Model {
     }
 
     public function setField($id, $field, $value, $userId) {
-        $allowed = array('status' => array('active', 'archived'), 'verify' => array('verified', 'unverified'), 'is_pinned' => array(0, 1),
+        $allowed = array('status' => array('active', 'archived'), 'verify' => array('verified', 'unverified', 'announced'), 'is_pinned' => array(0, 1),
             'is_public' => array(0, 1));
         if (!isset($allowed[$field]) || !in_array($value, $allowed[$field], true)) {
             return false;
@@ -182,15 +184,16 @@ class Notice_Model extends Model {
     /**
      * สำหรับหน้าประชาชน — เฉพาะที่ใช้อยู่ + ยืนยันแล้ว + เปิดให้ประชาชนเห็น (ข่าวที่ยังไม่ยืนยันไม่ออกหน้าประชาชนเด็ดขาด)
      * ไม่ส่งข้อมูลผู้บันทึก/ผู้แก้ไข
+     * เรียงข่าวล่าสุดไว้บนสุดเสมอ (ที่ปักหมุดไม่ถูกยกขึ้นก่อน — หน้าประชาชนแสดงป้าย "ปักหมุด" แทน)
      */
     public function listPublic($limit = 30) {
         $rows = $this->db->select(
             "SELECT n.notice_id, n.category, n.title, n.detail, n.place, n.contact, n.source_name, n.source_url,
-                    n.is_pinned, COALESCE(n.info_at, n.created_at) AS info_at, a.name AS amphoe_name
+                    n.is_pinned, n.verify, COALESCE(n.info_at, n.created_at) AS info_at, a.name AS amphoe_name
              FROM flood_notice n
              LEFT JOIN flood_amphoe a ON a.amphoe_code = n.amphoe_code
-             WHERE n.status = 'active' AND n.verify = 'verified' AND n.is_public = 1
-             ORDER BY n.is_pinned DESC, COALESCE(n.info_at, n.created_at) DESC
+             WHERE n.status = 'active' AND n.verify IN ('verified', 'announced') AND n.is_public = 1
+             ORDER BY COALESCE(n.info_at, n.created_at) DESC, n.notice_id DESC
              LIMIT " . (int) $limit);
         return $rows;
     }
