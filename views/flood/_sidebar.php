@@ -8,7 +8,7 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
         <span class="logo-mark">🌊</span>
         <div>
             <?= h(SHORT_NAME_SYSTEM) ?>
-            <small>จังหวัด<?= h(PROVINCE_NAME) ?></small>
+            <small><?= h(flood_region_name()) ?></small>
         </div>
         <button type="button" class="flood-menu-close" id="floodMenuClose" aria-label="ปิดเมนู"><i class="fa fa-times"></i></button>
     </div>

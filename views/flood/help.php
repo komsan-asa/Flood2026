@@ -58,11 +58,10 @@ $tab = function ($s) use ($f) {
     <input type="hidden" name="status" value="<?= h($f['status']) ?>" />
     <select name="priority" class="form-control"><?= flood_options($pr, $f['priority'], 'ทุกความเร่งด่วน') ?></select>
     <select name="need" class="form-control"><?= flood_options($needs, $f['need'], 'ทุกเรื่อง') ?></select>
-    <select name="amphoe" class="form-control">
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'data-pv-for' => 'fbAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
+    <select name="amphoe" class="form-control" id="fbAmphoe">
         <option value="">ทุกอำเภอ</option>
-        <?php foreach ($this->amphoes as $a) { ?>
-        <option value="<?= h($a['amphoe_code']) ?>"<?= $f['amphoe'] === $a['amphoe_code'] ? ' selected' : '' ?>>อ.<?= h($a['name']) ?></option>
-        <?php } ?>
+        <?= flood_amphoe_options($this->amphoes, $f['amphoe'], 'อ.') ?>
     </select>
     <?php if (!$isTeam) { ?>
     <select name="team_id" class="form-control">

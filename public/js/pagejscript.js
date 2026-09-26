@@ -182,4 +182,71 @@
             + Flood.esc(l.name) + '</span>';
     };
 
+    /*
+     * จังหวัด → อำเภอ: <select data-pv-for="idของselectอำเภอ"> (สร้างด้วย flood_province_select())
+     * เลือกจังหวัดแล้วรายการอำเภอเหลือเฉพาะจังหวัดนั้น · เลือกอำเภอก่อน → ตั้งจังหวัดให้เอง
+     * อำเภอที่เลือกไว้ไม่อยู่ในจังหวัดใหม่ → ล้างค่า แล้วส่ง change ต่อ (ให้รายการตำบลอัปเดต)
+     */
+    Flood.bindProvince = function (pvSel) {
+        var $pv = $(pvSel);
+        var $am = $('#' + $pv.data('pvFor'));
+        if (!$am.length || $pv.data('pvBound')) {
+            return;
+        }
+        $pv.data('pvBound', true);
+        var $all = $am.children().clone();   // ตัวเลือกทั้งหมด (รวม optgroup) เก็บไว้สร้างใหม่
+        function rebuild() {
+            var pv = String($pv.val() || '');
+            var cur = String($am.val() || '');
+            $am.empty();
+            $all.each(function () {
+                var $o = $(this);
+                var code = String($o.data('pv') || '');
+                if (!pv || !code || code === pv) {
+                    $am.append($o.clone());
+                }
+            });
+            if ($am.find('option').filter(function () { return this.value === cur; }).length) {
+                $am.val(cur);
+            } else {
+                $am.val('');
+                return cur !== '';   // ค่าเดิมหายไป
+            }
+            return false;
+        }
+        $pv.on('change', function () {
+            if (rebuild()) {
+                $am.trigger('change');
+            }
+        });
+        $am.on('change', function () {
+            var pv = String($am.find('option:selected').data('pv') || '');
+            if (pv && String($pv.val() || '') !== pv) {
+                $pv.val(pv);
+                rebuild();
+            }
+        });
+        // โหลดหน้า: ตั้งจังหวัดตามอำเภอที่เลือกไว้แล้ว
+        var pv0 = String($am.find('option:selected').data('pv') || '');
+        if (pv0 && !$pv.val()) {
+            $pv.val(pv0);
+        }
+        rebuild();
+    };
+
+    /** ตั้งค่า select อำเภอจากโค้ด (เช่นตอนเปิดฟอร์มแก้ไข) — ปรับ select จังหวัดที่ผูกไว้ให้ตรงก่อน */
+    Flood.setAmphoe = function (amSel, code) {
+        var $am = $(amSel);
+        var $pv = $('select[data-pv-for="' + $am.attr('id') + '"]');
+        code = String(code || '');
+        if ($pv.length) {
+            $pv.val(code ? code.substring(0, 2) : '').trigger('change');
+        }
+        $am.val(code);
+    };
+
+    $(function () {
+        $('select[data-pv-for]').each(function () { Flood.bindProvince(this); });
+    });
+
 })(window, jQuery);

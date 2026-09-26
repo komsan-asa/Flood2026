@@ -129,11 +129,14 @@ $jsRows = array();
                         <input type="text" class="form-control" id="nPlace" name="place" maxlength="200" />
                     </div></div>
                     <div class="col-sm-5"><div class="form-group">
-                        <label for="nAmphoe">อำเภอ</label>
-                        <select class="form-control" id="nAmphoe" name="amphoe_code">
-                            <option value="">ทั้งจังหวัด / ไม่ระบุ</option>
-                            <?php foreach ($this->amphoes as $a) { ?><option value="<?= h($a['amphoe_code']) ?>">อ.<?= h($a['name']) ?></option><?php } ?>
-                        </select>
+                        <label for="nAmphoe">จังหวัด / อำเภอ</label>
+                        <div class="pv-am-pair">
+                            <?= flood_province_select($this->provinces, array('class' => 'form-control', 'data-pv-for' => 'nAmphoe', 'aria-label' => 'จังหวัด'), '', '— จังหวัด —') ?>
+                            <select class="form-control" id="nAmphoe" name="amphoe_code">
+                                <option value="">ทั้งจังหวัด / ไม่ระบุ</option>
+                                <?= flood_amphoe_options($this->amphoes, '', 'อ.') ?>
+                            </select>
+                        </div>
                     </div></div>
                 </div>
                 <div class="row">

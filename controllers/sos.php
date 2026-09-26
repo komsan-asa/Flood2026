@@ -21,6 +21,7 @@ class Sos extends Controller {
     function index() {
         $this->view->pageTitle = 'ขอความช่วยเหลือ';
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->tambons = $this->model->getTambons();
         $this->view->rander('sos/index');
     }

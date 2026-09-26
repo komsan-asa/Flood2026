@@ -10,7 +10,7 @@ $vehicle = flood_vehicle_options();
 $trend = flood_trend_options();
 $impacts = flood_area_impacts();
 $tab = function ($s) use ($f) {
-    return URL . 'flood/reports?' . http_build_query(array('status' => $s, 'q' => $f['q'], 'impact' => $f['impact'] ?? ''));
+    return URL . 'flood/reports?' . http_build_query(array_filter(array('status' => $s, 'q' => $f['q'], 'impact' => $f['impact'] ?? '', 'province' => $f['province'] ?? '')));
 };
 $mapRows = array();
 foreach ($rows as $r) {
@@ -45,6 +45,9 @@ foreach ($rows as $r) {
     <input type="hidden" name="status" value="<?= h($f['status']) ?>" />
     <input type="search" name="q" value="<?= h($f['q']) ?>" class="form-control grow" placeholder="ค้นหาเลขอ้างอิง / ชื่อผู้แจ้ง / เบอร์โทร / จุดสังเกต" />
     <select name="impact" class="form-control" style="width:auto" aria-label="ผลกระทบในพื้นที่" onchange="this.form.submit()"><?= flood_options($impacts, $f['impact'] ?? '', 'ผลกระทบ: ทั้งหมด') ?></select>
+    <?php if (count((array) $this->provinces) > 1) { ?>
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'style' => 'width:auto', 'aria-label' => 'จังหวัด', 'onchange' => 'this.form.submit()'), $f['province'] ?? '', 'ทุกจังหวัด') ?>
+    <?php } ?>
     <button type="submit" class="btn btn-default"><i class="fa fa-search"></i> ค้นหา</button>
 </form>
 

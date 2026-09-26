@@ -121,13 +121,14 @@ $selGroups = $p ? flood_codes_filter($p['vuln_groups'], $groups) : array();
                     <div class="row">
                         <div class="col-sm-6">
                             <div class="form-group">
-                                <label for="vAmphoe">อำเภอ</label>
-                                <select class="form-control" id="vAmphoe" name="amphoe_code">
-                                    <option value="">—</option>
-                                    <?php foreach ($this->amphoes as $a) { ?>
-                                    <option value="<?= h($a['amphoe_code']) ?>"<?= $v('amphoe_code') === $a['amphoe_code'] ? ' selected' : '' ?>><?= h($a['name']) ?></option>
-                                    <?php } ?>
-                                </select>
+                                <label for="vAmphoe">จังหวัด / อำเภอ</label>
+                                <div class="pv-am-pair">
+                                    <?= flood_province_select($this->provinces, array('class' => 'form-control', 'data-pv-for' => 'vAmphoe', 'aria-label' => 'จังหวัด'), '', '— จังหวัด —') ?>
+                                    <select class="form-control" id="vAmphoe" name="amphoe_code">
+                                        <option value="">—</option>
+                                        <?= flood_amphoe_options($this->amphoes, $v('amphoe_code')) ?>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="col-sm-6">

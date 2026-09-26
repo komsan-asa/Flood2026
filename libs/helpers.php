@@ -941,8 +941,10 @@ function flood_map_config() {
         }
     }
     return array(
-        'center' => array((float) MAP_CENTER_LAT, (float) MAP_CENTER_LNG),
-        'zoom' => (int) MAP_ZOOM,
+        // ระบบครอบคลุมหลายจังหวัด → เปิดแผนที่ทั้งภูมิภาค (ตั้งเองได้ด้วย REGION_CENTER_LAT/LNG, REGION_ZOOM)
+        'center' => array(defined('REGION_CENTER_LAT') ? (float) REGION_CENTER_LAT : 13.15,
+            defined('REGION_CENTER_LNG') ? (float) REGION_CENTER_LNG : 101.75),
+        'zoom' => defined('REGION_ZOOM') ? (int) REGION_ZOOM : 8,
         'tileUrl' => MAP_TILE_URL,
         'attribution' => MAP_TILE_ATTRIBUTION,
         'levels' => $levels,
@@ -1193,4 +1195,68 @@ function flood_publish_image($src, $mime, $origName = '') {
         'mime' => 'image/jpeg',
         'size_bytes' => (int) @filesize($full),
     );
+}
+
+/* ============================================================
+ * จังหวัด — ระบบครอบคลุมหลายจังหวัด (ภาคตะวันออก)
+ * รหัสอำเภอ 4 หลัก: 2 หลักแรก = รหัสจังหวัด (กรมการปกครอง) เช่น 2706 → 27 สระแก้ว
+ * ============================================================ */
+
+/** ชื่อพื้นที่ที่ระบบครอบคลุม (ตั้งได้ด้วย REGION_NAME ใน config/app.php) */
+function flood_region_name() {
+    return defined('REGION_NAME') && REGION_NAME !== '' ? REGION_NAME : 'ภาคตะวันออก';
+}
+
+/** รหัสจังหวัดของอำเภอ/ตำบล */
+function flood_province_of($code) {
+    $code = (string) $code;
+    return strlen($code) >= 2 ? substr($code, 0, 2) : '';
+}
+
+/** รหัสจังหวัด 2 หลักจาก request (ค่าผิดรูปแบบ = '') */
+function flood_province_param($key = 'province', $src = null) {
+    $v = flood_in($key, '', $src === null ? $_GET : $src);
+    return preg_match('/^\d{2}$/', $v) ? $v : '';
+}
+
+/**
+ * <select> จังหวัด — ใช้คู่กับ select อำเภอ (data-pv-for = id ของ select อำเภอ)
+ * public/js/pagejscript.js จะกรองรายการอำเภอให้เหลือเฉพาะจังหวัดที่เลือก
+ */
+function flood_province_select($provinces, $attrs = array(), $selected = '', $allLabel = 'ทุกจังหวัด') {
+    $a = '';
+    foreach ($attrs as $k => $v) {
+        $a .= ' ' . h($k) . '="' . h($v) . '"';
+    }
+    $html = '<select' . $a . '><option value="">' . h($allLabel) . '</option>';
+    foreach ((array) $provinces as $p) {
+        $html .= '<option value="' . h($p['province_code']) . '"' . ((string) $selected === (string) $p['province_code'] ? ' selected' : '')
+            . '>จ.' . h($p['name']) . '</option>';
+    }
+    return $html . '</select>';
+}
+
+/**
+ * <option> อำเภอ แบ่งกลุ่มตามจังหวัด (มีจังหวัดเดียว = ไม่แบ่งกลุ่ม)
+ * @param string $prefix ข้อความนำหน้าชื่อ เช่น 'อ.'
+ */
+function flood_amphoe_options($amphoes, $selected = '', $prefix = '') {
+    $groups = array();
+    foreach ((array) $amphoes as $a) {
+        $pv = isset($a['province_code']) ? $a['province_code'] : flood_province_of($a['amphoe_code']);
+        if (!isset($groups[$pv])) {
+            $groups[$pv] = array('name' => isset($a['province_name']) ? $a['province_name'] : $pv, 'items' => array());
+        }
+        $groups[$pv]['items'][] = $a;
+    }
+    $html = '';
+    foreach ($groups as $pv => $g) {
+        $opts = '';
+        foreach ($g['items'] as $a) {
+            $opts .= '<option value="' . h($a['amphoe_code']) . '" data-pv="' . h($pv) . '"'
+                . ((string) $selected === (string) $a['amphoe_code'] ? ' selected' : '') . '>' . h($prefix . $a['name']) . '</option>';
+        }
+        $html .= count($groups) > 1 ? '<optgroup label="จ.' . h($g['name']) . '" data-pv="' . h($pv) . '">' . $opts . '</optgroup>' : $opts;
+    }
+    return $html;
 }

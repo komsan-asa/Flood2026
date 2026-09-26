@@ -3,7 +3,7 @@
 /**
  * API สาธารณะสำหรับหน้าแผนที่ — คืนเฉพาะพื้นที่ประกาศ (ไม่มีข้อมูลส่วนบุคคล)
  *   GET api/zones             พื้นที่ที่ประกาศอยู่ทั้งหมด (photos = รหัสภาพประกอบ)
- *   GET api/zones?amphoe=2706 เฉพาะอำเภอ
+ *   GET api/zones?amphoe=2706 เฉพาะอำเภอ · ?province=27 เฉพาะจังหวัด
  *   GET api/zoneThumb/<id>    ภาพย่อสำหรับบอลลูน (640px)
  *   GET api/zonePhoto/<id>    ภาพขนาดเต็ม (1600px)
  *   GET api/votes?zone=<id>   ยอด Like / Not Like ของพื้นที่ + เสียงของเบราว์เซอร์นี้
@@ -24,10 +24,11 @@ class Api extends Controller {
         if ($amphoe !== '' && !preg_match('/^\d{4}$/', $amphoe)) {
             $amphoe = '';
         }
+        $province = flood_province_param('province');
         flood_json(array(
             'chk' => true,
-            'zones' => $this->model->publicZones($amphoe),
-            'points' => $this->model->publicReportPoints($amphoe),
+            'zones' => $this->model->publicZones($amphoe, $province),
+            'points' => $this->model->publicReportPoints($amphoe, $province),
             'counts' => $this->model->zoneCounts(),
             'updated' => date('Y-m-d H:i:s'),
             'updated_th' => flood_thai_date(time()),

@@ -35,11 +35,10 @@ foreach ($rows as $r) {
 
 <form class="filter-bar" method="get" action="<?= URL ?>flood/vulnerable" style="margin-bottom:12px">
     <input type="search" name="q" value="<?= h($f['q']) ?>" class="form-control grow" placeholder="ค้นหาชื่อ / HN / เบอร์โทร / ที่อยู่" />
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'data-pv-for' => 'vfAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
     <select name="amphoe" class="form-control" id="vfAmphoe">
         <option value="">ทุกอำเภอ</option>
-        <?php foreach ($this->amphoes as $a) { ?>
-        <option value="<?= h($a['amphoe_code']) ?>"<?= $f['amphoe'] === $a['amphoe_code'] ? ' selected' : '' ?>>อ.<?= h($a['name']) ?></option>
-        <?php } ?>
+        <?= flood_amphoe_options($this->amphoes, $f['amphoe'], 'อ.') ?>
     </select>
     <select name="tambon" class="form-control" id="vfTambon" data-selected="<?= h($f['tambon']) ?>"><option value="">ทุกตำบล</option></select>
     <select name="group" class="form-control"><?= flood_options($groups, $f['group'], 'ทุกกลุ่ม') ?></select>

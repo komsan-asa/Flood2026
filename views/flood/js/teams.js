@@ -12,7 +12,7 @@ $(function () {
         $('#tName').val(t.name);
         $('#tType').val(t.team_type);
         $('#tPhone').val(t.phone);
-        $('#tAmphoe').val(t.amphoe_code);
+        Flood.setAmphoe('#tAmphoe', t.amphoe_code);
         $('#tVehicles').val(t.vehicles);
         $('#tNote').val(t.note);
         $('#tActive').prop('checked', !!t.is_active);

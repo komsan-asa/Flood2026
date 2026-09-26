@@ -4,8 +4,132 @@ class Flood_Model extends Model {
 
     /* ==================== ข้อมูลอ้างอิง ==================== */
 
-    public function getAmphoes() {
-        return $this->db->select("SELECT amphoe_code, name FROM flood_amphoe WHERE is_active = 1 ORDER BY sort_order, name");
+    /**
+     * สร้างตาราง flood_province + เติมอำเภอ/ตำบลภาคตะวันออก 7 จังหวัดครั้งแรก (จาก sql/province_east.json)
+     * รันซ้ำได้ (INSERT IGNORE) · ไม่มีสิทธิ์ CREATE → ใช้ sql/15_flood_province_east.sql แทน
+     */
+    public function ensureProvinces() {
+        static $ready = null;
+        if ($ready !== null) {
+            return $ready;
+        }
+        try {
+            $n = (int) $this->db->selectValue("SELECT COUNT(*) FROM flood_province");
+            if ($n > 0) {
+                return $ready = true;
+            }
+        } catch (Exception $e) {
+            try {
+                $this->db->exec("CREATE TABLE IF NOT EXISTS `flood_province` (
+                    `province_code` CHAR(2) NOT NULL COMMENT 'รหัสจังหวัด (กรมการปกครอง) เช่น 27',
+                    `name` VARCHAR(100) NOT NULL,
+                    `sort_order` INT NOT NULL DEFAULT 0,
+                    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+                    `lat` DECIMAL(10,7) DEFAULT NULL COMMENT 'จุดกึ่งกลางโดยประมาณ',
+                    `lng` DECIMAL(10,7) DEFAULT NULL,
+                    PRIMARY KEY (`province_code`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            } catch (Exception $e2) {
+                error_log('[flood] create flood_province: ' . $e2->getMessage());
+                return $ready = false;
+            }
+        }
+        $file = dirname(__DIR__) . '/sql/province_east.json';
+        $data = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        if (!is_array($data) || empty($data['provinces'])) {
+            error_log('[flood] province seed missing: ' . $file);
+            return $ready = false;
+        }
+        try {
+            $this->db->beginTransaction();
+            $this->seedRows("INSERT IGNORE INTO flood_province (province_code, name, sort_order, is_active, lat, lng) VALUES ",
+                '(?, ?, ?, 1, ?, ?)', $data['provinces']);
+            $amphoes = array();
+            foreach ($data['amphoes'] as $a) {
+                $amphoes[] = array($a[0], $a[1], (int) $a[0]);   // อำเภอใหม่เรียงตามรหัส (สระแก้วเดิม 1–9 อยู่บนสุด)
+            }
+            $this->seedRows("INSERT IGNORE INTO flood_amphoe (amphoe_code, name, sort_order, is_active) VALUES ", '(?, ?, ?, 1)', $amphoes);
+            $this->seedRows("INSERT IGNORE INTO flood_tambon (tambon_code, amphoe_code, name, zipcode, lat, lng) VALUES ",
+                '(?, ?, ?, ?, ?, ?)', $data['tambons']);
+            $this->db->commit();
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log('[flood] province seed: ' . $e->getMessage());
+            return $ready = false;
+        }
+        return $ready = true;
+    }
+
+    /** INSERT หลายแถวต่อคำสั่ง (ค่าผูกผ่าน placeholder ทั้งหมด) — ไม่ผ่าน Audit เพราะเป็นข้อมูลอ้างอิง */
+    private function seedRows($head, $tuple, $rows) {
+        foreach (array_chunk($rows, 100) as $chunk) {
+            $vals = array();
+            foreach ($chunk as $r) {
+                foreach ($r as $v) {
+                    $vals[] = $v;
+                }
+            }
+            $sth = $this->db->prepare($head . implode(', ', array_fill(0, count($chunk), $tuple)));
+            $sth->execute($vals);
+        }
+    }
+
+    /** จังหวัดที่เปิดใช้ (สระแก้วก่อน) */
+    public function getProvinces() {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        if (!$this->ensureProvinces()) {
+            // ยังไม่มีตาราง — ใช้จังหวัดจากรหัสอำเภอที่มีอยู่
+            $cache = array();
+            foreach ($this->db->select("SELECT DISTINCT LEFT(amphoe_code, 2) AS pv FROM flood_amphoe WHERE is_active = 1 ORDER BY pv") as $r) {
+                $cache[] = array('province_code' => $r['pv'], 'name' => $r['pv'] === '27' ? 'สระแก้ว' : $r['pv'], 'lat' => null, 'lng' => null);
+            }
+            return $cache;
+        }
+        $cache = $this->db->select("SELECT province_code, name, lat, lng FROM flood_province WHERE is_active = 1 ORDER BY sort_order, province_code");
+        foreach ($cache as $i => $p) {
+            $cache[$i]['lat'] = $p['lat'] !== null ? (float) $p['lat'] : null;
+            $cache[$i]['lng'] = $p['lng'] !== null ? (float) $p['lng'] : null;
+        }
+        return $cache;
+    }
+
+    /** อำเภอที่เปิดใช้ (เฉพาะจังหวัดที่เปิดใช้) พร้อม province_code / province_name */
+    public function getAmphoes($province = '') {
+        $pv = array();
+        foreach ($this->getProvinces() as $p) {
+            $pv[$p['province_code']] = $p['name'];
+        }
+        $out = array();
+        foreach ($this->db->select("SELECT amphoe_code, name FROM flood_amphoe WHERE is_active = 1 ORDER BY sort_order, name") as $a) {
+            $code = flood_province_of($a['amphoe_code']);
+            if (!isset($pv[$code]) || ($province !== '' && $code !== $province)) {
+                continue;
+            }
+            $a['province_code'] = $code;
+            $a['province_name'] = $pv[$code];
+            $out[] = $a;
+        }
+        return $out;
+    }
+
+    /** กรอบพิกัดของแต่ละจังหวัด (จากจุดกึ่งกลางตำบล + ขอบ ~3 กม.) — ใช้กรองรายงานที่มีแต่พิกัด */
+    public function provinceBox($province) {
+        if ($province === '') {
+            return null;
+        }
+        $r = $this->db->selectOne(
+            "SELECT MIN(lat) AS s, MAX(lat) AS n, MIN(lng) AS w, MAX(lng) AS e FROM flood_tambon
+             WHERE amphoe_code LIKE :pv AND lat IS NOT NULL", array(':pv' => $province . '%'));
+        if (!$r || $r['s'] === null) {
+            return null;
+        }
+        $m = 0.03;
+        return array((float) $r['s'] - $m, (float) $r['n'] + $m, (float) $r['w'] - $m, (float) $r['e'] + $m);
     }
 
     public function getTambons() {
@@ -346,6 +470,10 @@ class Flood_Model extends Model {
             $where[] = 'z.amphoe_code = :am';
             $params[':am'] = $filters['amphoe'];
         }
+        if (!empty($filters['province'])) {
+            $where[] = 'z.amphoe_code LIKE :pv';
+            $params[':pv'] = $filters['province'] . '%';
+        }
         if (!empty($filters['q'])) {
             $where[] = '(z.name LIKE :q OR z.note LIKE :q OR t.name LIKE :q)';
             $params[':q'] = '%' . $filters['q'] . '%';
@@ -476,12 +604,15 @@ class Flood_Model extends Model {
      * ให้คนเห็นจุดน้ำท่วมจริงทีละจุด (ระวังตอนเข้าพื้นที่/ผ่านทาง)
      * ไม่ส่งชื่อ เบอร์ จุดสังเกต (ข้อความอิสระอาจมีข้อมูลส่วนบุคคล) หรือรูปของผู้แจ้ง
      */
-    public function publicReportPoints($amphoe = '') {
+    public function publicReportPoints($amphoe = '', $province = '') {
         $params = array();
         $cond = '';
         if ($amphoe !== '') {
             $cond = ' AND z.amphoe_code = :am';
             $params[':am'] = $amphoe;
+        } elseif ($province !== '') {
+            $cond = ' AND z.amphoe_code LIKE :pv';
+            $params[':pv'] = $province . '%';
         }
         $impactCol = $this->reportImpactsReady() ? 'r.impacts' : 'NULL';
         $sourceCol = $this->reportSourceReady() ? 'r.source_url' : 'NULL';
@@ -520,7 +651,7 @@ class Flood_Model extends Model {
                 'ago' => flood_ago($r['created_at']),
             );
         }
-        return array_merge($out, $this->publicPendingPoints($amphoe));
+        return array_merge($out, $this->publicPendingPoints($amphoe, $province));
     }
 
     /**
@@ -528,7 +659,7 @@ class Flood_Model extends Model {
      * เฉพาะ 48 ชั่วโมงล่าสุด (ปรับได้ด้วย PUBLIC_PENDING_HOURS · ปิดทั้งหมดด้วย define('PUBLIC_SHOW_PENDING', false))
      * ไม่ส่งชื่อ เบอร์ หรือข้อความจุดสังเกตของผู้แจ้ง · ไม่ผลกับตัวเลขพื้นที่ประกาศ
      */
-    private function publicPendingPoints($amphoe = '') {
+    private function publicPendingPoints($amphoe = '', $province = '') {
         if (defined('PUBLIC_SHOW_PENDING') && !PUBLIC_SHOW_PENDING) {
             return array();
         }
@@ -555,18 +686,33 @@ class Flood_Model extends Model {
         $trend = flood_trend_options();
         $impacts = flood_area_impacts();
         $out = array();
+        foreach ($tambons as $i => $t) {
+            $tambons[$i]['lat'] = (float) $t['lat'];
+            $tambons[$i]['lng'] = (float) $t['lng'];
+        }
         foreach ($rows as $r) {
+            // หาตำบลใกล้สุดด้วยระยะแบบประมาณ (เร็ว — ตำบลทั้งภูมิภาคหลายร้อยแห่ง) แล้วค่อยตรวจระยะจริง
             $am = '';
-            $best = 40000;
+            $bestT = null;
+            $best = INF;
+            $la = (float) $r['lat'];
+            $ln = (float) $r['lng'];
+            $k = cos(deg2rad($la));
             foreach ($tambons as $t) {
-                $d = flood_haversine_m($r['lat'], $r['lng'], $t['lat'], $t['lng']);
+                $dy = $t['lat'] - $la;
+                $dx = ($t['lng'] - $ln) * $k;
+                $d = $dx * $dx + $dy * $dy;
                 if ($d < $best) {
                     $best = $d;
-                    $am = $t['amphoe_code'];
+                    $bestT = $t;
                 }
             }
-            if ($am === '' || ($amphoe !== '' && $am !== $amphoe)) {
-                continue;   // นอกจังหวัด หรือไม่ใช่อำเภอที่เลือก
+            if ($bestT && flood_haversine_m($la, $ln, $bestT['lat'], $bestT['lng']) < 40000) {
+                $am = $bestT['amphoe_code'];
+            }
+            if ($am === '' || ($amphoe !== '' && $am !== $amphoe)
+                || ($amphoe === '' && $province !== '' && flood_province_of($am) !== $province)) {
+                continue;   // นอกพื้นที่ระบบ หรือไม่ใช่อำเภอ/จังหวัดที่เลือก
             }
             $out[] = array(
                 'id' => (int) $r['report_id'],
@@ -620,8 +766,8 @@ class Flood_Model extends Model {
     }
 
     /** ข้อมูลหน้าแผนที่สาธารณะ (พร้อมรหัสภาพประกอบ) */
-    public function publicZones($amphoe = '') {
-        $rows = $this->listZones(array('status' => 'active', 'amphoe' => $amphoe));
+    public function publicZones($amphoe = '', $province = '') {
+        $rows = $this->listZones(array('status' => 'active', 'amphoe' => $amphoe, 'province' => $amphoe === '' ? $province : ''));
         $out = array();
         foreach ($rows as $z) {
             $out[] = $this->zoneForMap($z);
@@ -1021,6 +1167,13 @@ class Flood_Model extends Model {
             $where[] = 'FIND_IN_SET(:im, r.impacts) > 0';
             $params[':im'] = $filters['impact'];
         }
+        if (!empty($filters['province']) && ($box = $this->provinceBox($filters['province']))) {
+            $where[] = 'r.lat BETWEEN :bs AND :bn AND r.lng BETWEEN :bw AND :be';
+            $params[':bs'] = $box[0];
+            $params[':bn'] = $box[1];
+            $params[':bw'] = $box[2];
+            $params[':be'] = $box[3];
+        }
         if (!empty($filters['days'])) {
             $where[] = 'r.created_at >= :from';
             $params[':from'] = date('Y-m-d H:i:s', time() - (int) $filters['days'] * 86400);
@@ -1214,6 +1367,10 @@ class Flood_Model extends Model {
             $where[] = 'h.amphoe_code = :am';
             $params[':am'] = $filters['amphoe'];
         }
+        if (!empty($filters['province'])) {
+            $where[] = 'h.amphoe_code LIKE :pv';
+            $params[':pv'] = $filters['province'] . '%';
+        }
         if (!empty($filters['need']) && array_key_exists($filters['need'], flood_help_needs())) {
             $where[] = 'FIND_IN_SET(:nd, h.needs) > 0';
             $params[':nd'] = $filters['need'];
@@ -1363,6 +1520,10 @@ class Flood_Model extends Model {
         if (!empty($filters['amphoe'])) {
             $where[] = 'v.amphoe_code = :am';
             $params[':am'] = $filters['amphoe'];
+        }
+        if (!empty($filters['province'])) {
+            $where[] = 'v.amphoe_code LIKE :pv';
+            $params[':pv'] = $filters['province'] . '%';
         }
         if (!empty($filters['tambon'])) {
             $where[] = 'v.tambon_code = :tb';

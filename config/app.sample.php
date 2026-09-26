@@ -52,6 +52,11 @@ define('HOTLINE_PHONE', '');                // เบอร์ศูนย์ป
 define('MAP_CENTER_LAT', 13.80);            // กึ่งกลางจังหวัดสระแก้วโดยประมาณ
 define('MAP_CENTER_LNG', 102.30);
 define('MAP_ZOOM', 9);
+// ระบบครอบคลุมหลายจังหวัด (ภาคตะวันออก 7 จังหวัด) — ชื่อและมุมมองแผนที่เริ่มต้นของทั้งภูมิภาค
+define('REGION_NAME', 'ภาคตะวันออก');
+define('REGION_CENTER_LAT', 13.15);
+define('REGION_CENTER_LNG', 101.75);
+define('REGION_ZOOM', 8);
 define('MAP_TILE_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png');
 define('MAP_TILE_ATTRIBUTION', '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors');
 

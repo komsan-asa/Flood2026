@@ -74,13 +74,14 @@ $shape = $z ? $z['shape'] : 'circle';
                     <div class="row">
                         <div class="col-sm-6">
                             <div class="form-group">
-                                <label for="zAmphoe">อำเภอ</label>
-                                <select class="form-control" id="zAmphoe" name="amphoe_code">
-                                    <option value="">— ให้ระบบหาจากแผนที่ —</option>
-                                    <?php foreach ($this->amphoes as $a) { ?>
-                                    <option value="<?= h($a['amphoe_code']) ?>"<?= $amphoe === $a['amphoe_code'] ? ' selected' : '' ?>><?= h($a['name']) ?></option>
-                                    <?php } ?>
-                                </select>
+                                <label for="zAmphoe">จังหวัด / อำเภอ</label>
+                                <div class="pv-am-pair">
+                                    <?= flood_province_select($this->provinces, array('class' => 'form-control', 'data-pv-for' => 'zAmphoe', 'aria-label' => 'จังหวัด'), '', '— จังหวัด —') ?>
+                                    <select class="form-control" id="zAmphoe" name="amphoe_code">
+                                        <option value="">— ให้ระบบหาจากแผนที่ —</option>
+                                        <?= flood_amphoe_options($this->amphoes, $amphoe) ?>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="col-sm-6">

@@ -89,13 +89,14 @@ $flags = flood_help_flags();
                     <div class="row">
                         <div class="col-sm-6">
                             <div class="form-group">
-                                <label for="fAmphoe">อำเภอ</label>
-                                <select class="form-control" id="fAmphoe" name="amphoe_code">
-                                    <option value="">—</option>
-                                    <?php foreach ($this->amphoes as $a) { ?>
-                                    <option value="<?= h($a['amphoe_code']) ?>"><?= h($a['name']) ?></option>
-                                    <?php } ?>
-                                </select>
+                                <label for="fAmphoe">จังหวัด / อำเภอ</label>
+                                <div class="pv-am-pair">
+                                    <?= flood_province_select($this->provinces, array('class' => 'form-control', 'data-pv-for' => 'fAmphoe', 'aria-label' => 'จังหวัด'), '', '— จังหวัด —') ?>
+                                    <select class="form-control" id="fAmphoe" name="amphoe_code">
+                                        <option value="">—</option>
+                                        <?= flood_amphoe_options($this->amphoes, '') ?>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="col-sm-6">

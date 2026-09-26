@@ -12,7 +12,7 @@ $icons = array(
     'watch' => '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
 );
 ?>
-<div id="pubMap" class="sk-map sk-fullmap" role="region" aria-label="แผนที่พื้นที่ประกาศน้ำท่วม จังหวัด<?= h(PROVINCE_NAME) ?>"></div>
+<div id="pubMap" class="sk-map sk-fullmap" role="region" aria-label="แผนที่พื้นที่ประกาศน้ำท่วม <?= h(flood_region_name()) ?>"></div>
 
 <header class="sk-top sk-glass">
     <a href="<?= URL ?>" class="sk-brand">
@@ -20,7 +20,7 @@ $icons = array(
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16c2 0 2-1.5 4-1.5S8 16 10 16s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M2 20.5c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M12 2.5s-4 4.5-4 7a4 4 0 0 0 8 0c0-2.5-4-7-4-7z"/></svg>
         </span>
         <span class="sk-brand-text">
-            <b><span class="sk-nw">สถานการณ์น้ำ</span> จ.<?= h(PROVINCE_NAME) ?></b>
+            <b><span class="sk-nw">สถานการณ์น้ำ</span> <span id="pubRegion"><?= h(flood_region_name()) ?></span></b>
             <small><span class="sk-live"></span><span>อัปเดต <span id="pubUpdated"><?= h(flood_thai_date(time())) ?></span><span class="sk-next" id="pubNext"></span><span class="sk-online-mini" id="pubOnlineMini"<?= empty($this->visitStats) ? ' hidden' : '' ?>> · <i></i><b data-visit="online"><?= (int) ($this->visitStats['online'] ?? 0) ?></b> คนกำลังดู</span><span class="sk-org"> · <?= h(DEPARTMENT_NAME) ?></span></span></small>
         </span>
     </a>
@@ -90,10 +90,18 @@ $icons = array(
             <p class="sk-eyebrow" style="margin:0">พื้นที่ประกาศ <b id="pubTotal"><?= (int) ($counts['total'] ?? 0) ?></b> แห่ง · จุดแจ้ง <b id="pubPoints"><?= count(array_filter((array) $this->points, function ($p) { return empty($p['pending']); })) ?></b> จุด<span class="sk-pend-wrap" hidden> · รอตรวจสอบ <b id="pubPending">0</b></span></p>
             <button type="button" class="sk-clear" id="pubLevelClear" hidden>ล้างตัวกรอง <b id="pubLevelName"></b> ✕</button>
         </div>
-        <div class="sk-chips" id="pubAmphoe" role="group" aria-label="เลือกอำเภอ">
+        <?php if (count((array) $this->provinces) > 1) { ?>
+        <div class="sk-chips sk-chips-pv" id="pubProvince" role="group" aria-label="เลือกจังหวัด">
+            <button type="button" class="sk-chip" data-province="" aria-pressed="true">ทุกจังหวัด</button>
+            <?php foreach ($this->provinces as $p) { ?>
+            <button type="button" class="sk-chip" data-province="<?= h($p['province_code']) ?>" aria-pressed="false"><?= h($p['name']) ?></button>
+            <?php } ?>
+        </div>
+        <?php } ?>
+        <div class="sk-chips" id="pubAmphoe" role="group" aria-label="เลือกอำเภอ"<?= count((array) $this->provinces) > 1 ? ' hidden' : '' ?>>
             <button type="button" class="sk-chip" data-amphoe="" aria-pressed="true">ทุกอำเภอ</button>
             <?php foreach ($this->amphoes as $a) { ?>
-            <button type="button" class="sk-chip" data-amphoe="<?= h($a['amphoe_code']) ?>" aria-pressed="false"><?= h($a['name']) ?></button>
+            <button type="button" class="sk-chip" data-amphoe="<?= h($a['amphoe_code']) ?>" data-pv="<?= h($a['province_code']) ?>" aria-pressed="false"><?= h($a['name']) ?></button>
             <?php } ?>
         </div>
         <div id="pubList" class="sk-zones" aria-live="polite"></div>
@@ -139,5 +147,10 @@ $icons = array(
         'zones' => $this->zones,
         'points' => (array) $this->points,
         'counts' => $counts,
+        'region' => flood_region_name(),
+        'provinces' => array_map(function ($p) {
+            return array('code' => $p['province_code'], 'name' => $p['name'], 'lat' => $p['lat'], 'lng' => $p['lng']);
+        }, (array) $this->provinces),
+        'province' => flood_province_param('province'),
     )) ?>;
 </script>

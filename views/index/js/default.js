@@ -19,6 +19,17 @@ $(function () {
     var levelFilter = '';
     var amphoeFilter = '';
     var amphoeName = '';
+    var provinceFilter = '';
+    var provinceName = '';
+    var regionName = data.region || 'ภาคตะวันออก';
+    /** ขอบเขตที่กำลังดู — ใช้ในข้อความ "ภาพรวม..." / "ยังไม่มีพื้นที่ประกาศ..." */
+    function scopeName(prefix) {
+        var s = amphoeName ? 'อ.' + amphoeName : (provinceName ? 'จ.' + provinceName : 'ทั้ง' + regionName);
+        return prefix ? prefix + (amphoeName || provinceName ? ' ' : '') + s : s;
+    }
+    function provinceInfo(code) {
+        return (data.provinces || []).filter(function (p) { return p.code === code; })[0] || null;
+    }
     var firstFit = true;
     var $panel = $('#pubPanel');
     var $main = $panel.children('.sk-panel-scroll').first();
@@ -87,9 +98,13 @@ $(function () {
         if (layers.length) {
             map.fitBounds(L.featureGroup(layers).getBounds(), $.extend({ maxZoom: 14 }, pad));
         } else {
-            // ยังไม่มีพื้นที่ — จัดจังหวัดให้อยู่ในส่วนที่มองเห็น
-            var c = L.latLng(FloodMap.config.center);
-            map.fitBounds(c.toBounds(90000), pad);
+            // ยังไม่มีพื้นที่ — จัดจังหวัดที่เลือก (หรือทั้งภูมิภาค) ให้อยู่ในส่วนที่มองเห็น
+            var p = provinceFilter ? provinceInfo(provinceFilter) : null;
+            if (p && p.lat) {
+                map.fitBounds(L.latLng(p.lat, p.lng).toBounds(90000), pad);
+            } else {
+                map.fitBounds(L.latLng(FloodMap.config.center).toBounds(provinceFilter ? 90000 : 260000), pad);
+            }
         }
     }
 
@@ -361,7 +376,7 @@ $(function () {
         var zs = listZones();
         var $list = $('#pubList').empty();
         if (!zs.length) {
-            var where = amphoeName ? 'อ.' + esc(amphoeName) : 'ทั้งจังหวัด';
+            var where = esc(scopeName(''));
             $list.append('<div class="sk-empty"><div class="sk-empty-ok"><i class="fa fa-check"></i></div>'
                 + (data.zones.length
                     ? '<b>ไม่มีพื้นที่ในระดับที่เลือก</b><small>ลองล้างตัวกรองเพื่อดูทั้งหมด</small>'
@@ -849,7 +864,7 @@ $(function () {
         });
         $('#pubTotal').text(c.total);
         // ตัวเลขสรุปตามอำเภอที่เลือก — บอกให้ชัดว่าเป็นภาพรวมของที่ไหน
-        $('#pubOverview').text((amphoeName ? 'ภาพรวม อ.' + amphoeName : 'ภาพรวมทั้งจังหวัด') + ' · แตะเพื่อกรอง');
+        $('#pubOverview').text(scopeName('ภาพรวม') + ' · แตะเพื่อกรอง');
     }
 
     function renderAll() {
@@ -883,7 +898,7 @@ $(function () {
 
     function reload() {
         nextIn = REFRESH_SEC;
-        Flood.get('api/zones', { amphoe: amphoeFilter }, { silent: true }).then(function (o) {
+        Flood.get('api/zones', { amphoe: amphoeFilter, province: provinceFilter }, { silent: true }).then(function (o) {
             data.zones = o.zones || [];
             data.points = o.points || [];
             $('#pubUpdated').text(o.updated_th || '');
@@ -1007,11 +1022,51 @@ $(function () {
         reload();
     });
 
+    /* ---------- เลือกจังหวัด → แสดงอำเภอของจังหวัดนั้น ---------- */
+    function setProvince(code, silent) {
+        var p = code ? provinceInfo(code) : null;
+        provinceFilter = p ? p.code : '';
+        provinceName = p ? p.name : '';
+        amphoeFilter = '';
+        amphoeName = '';
+        $('#pubProvince .sk-chip').each(function () {
+            $(this).attr('aria-pressed', String(String($(this).attr('data-province') || '') === provinceFilter));
+        });
+        $('#pubAmphoe .sk-chip').attr('aria-pressed', 'false').filter('[data-amphoe=""]').attr('aria-pressed', 'true');
+        $('#pubAmphoe .sk-chip[data-pv]').each(function () {
+            this.hidden = $(this).attr('data-pv') !== provinceFilter;
+        });
+        if ($('#pubProvince').length) {
+            $('#pubAmphoe').prop('hidden', !provinceFilter);
+        }
+        $('#pubRegion').text(provinceName ? 'จ.' + provinceName : regionName);
+        // จำจังหวัดไว้ใน URL — แชร์ลิงก์แล้วเปิดตรงจังหวัดเดิม
+        try {
+            var u = new URL(window.location.href);
+            if (provinceFilter) {
+                u.searchParams.set('province', provinceFilter);
+            } else {
+                u.searchParams.delete('province');
+            }
+            window.history.replaceState(window.history.state, '', u.toString());
+        } catch (e) { /* เบราว์เซอร์เก่า */ }
+        if (!silent) {
+            firstFit = true;
+            reload();
+        }
+    }
+    $('#pubProvince').on('click', '.sk-chip', function () {
+        setProvince(String($(this).attr('data-province') || ''));
+    });
+
     $('#pubHandle').on('click', function () {
         setSheet(!$panel.hasClass('open'));
     });
 
     renderAll();
+    if (data.province) {
+        setProvince(data.province);   // เปิดจากลิงก์ ?province=27
+    }
 
     // ลิงก์ตรงถึงพื้นที่ (#zone-12) — ส่งต่อในไลน์แล้วเปิดมาที่รายละเอียดเลย
     var hz = zoneFromHash();

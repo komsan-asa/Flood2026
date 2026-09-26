@@ -5,7 +5,7 @@ $counts = $this->zoneCounts;
 $levels = flood_zone_levels();
 $sources = flood_zone_sources();
 $tabLink = function ($status) use ($f) {
-    return URL . 'flood/zones?' . http_build_query(array('status' => $status, 'level' => $f['level'], 'amphoe' => $f['amphoe'], 'q' => $f['q']));
+    return URL . 'flood/zones?' . http_build_query(array('status' => $status, 'level' => $f['level'], 'province' => $f['province'], 'amphoe' => $f['amphoe'], 'q' => $f['q']));
 };
 ?>
 <div class="flood-page-header">
@@ -40,11 +40,10 @@ $tabLink = function ($status) use ($f) {
 <form class="filter-bar" method="get" action="<?= URL ?>flood/zones" style="margin-bottom:12px">
     <input type="hidden" name="status" value="<?= h($f['status']) ?>" />
     <select name="level" class="form-control"><?= flood_options($levels, $f['level'], 'ทุกระดับ') ?></select>
-    <select name="amphoe" class="form-control">
+    <?= flood_province_select($this->provinces, array('name' => 'province', 'class' => 'form-control', 'data-pv-for' => 'fbAmphoe', 'aria-label' => 'จังหวัด'), $f['province'], 'ทุกจังหวัด') ?>
+    <select name="amphoe" class="form-control" id="fbAmphoe">
         <option value="">ทุกอำเภอ</option>
-        <?php foreach ($this->amphoes as $a) { ?>
-        <option value="<?= h($a['amphoe_code']) ?>"<?= $f['amphoe'] === $a['amphoe_code'] ? ' selected' : '' ?>>อ.<?= h($a['name']) ?></option>
-        <?php } ?>
+        <?= flood_amphoe_options($this->amphoes, $f['amphoe'], 'อ.') ?>
     </select>
     <input type="search" name="q" value="<?= h($f['q']) ?>" class="form-control grow" placeholder="ค้นหาชื่อพื้นที่ / ข้อความ / ตำบล" />
     <button type="submit" class="btn btn-default"><i class="fa fa-search"></i> ค้นหา</button>

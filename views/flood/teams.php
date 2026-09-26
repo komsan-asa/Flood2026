@@ -65,12 +65,13 @@ $rows = $this->teamRows;
                 </div>
                 <div class="form-group">
                     <label for="tAmphoe">พื้นที่รับผิดชอบหลัก</label>
-                    <select class="form-control" id="tAmphoe" name="amphoe_code">
-                        <option value="">ทุกพื้นที่</option>
-                        <?php foreach ($this->amphoes as $a) { ?>
-                        <option value="<?= h($a['amphoe_code']) ?>">อ.<?= h($a['name']) ?></option>
-                        <?php } ?>
-                    </select>
+                    <div class="pv-am-pair">
+                        <?= flood_province_select($this->provinces, array('class' => 'form-control', 'data-pv-for' => 'tAmphoe', 'aria-label' => 'จังหวัด'), '', '— จังหวัด —') ?>
+                        <select class="form-control" id="tAmphoe" name="amphoe_code">
+                            <option value="">ทุกพื้นที่</option>
+                            <?= flood_amphoe_options($this->amphoes, '', 'อ.') ?>
+                        </select>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="tVehicles">ยานพาหนะ / อุปกรณ์</label>

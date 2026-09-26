@@ -21,7 +21,7 @@ $(function () {
         $('#nTitleIn').val(n.title);
         $('#nDetail').val(n.detail);
         $('#nPlace').val(n.place);
-        $('#nAmphoe').val(n.amphoe_code);
+        Flood.setAmphoe('#nAmphoe', n.amphoe_code);
         $('#nContact').val(n.contact);
         $('#nInfoAt').val(n.info_at);
         $('#nSrcName').val(n.source_name);

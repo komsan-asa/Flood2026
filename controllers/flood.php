@@ -372,6 +372,7 @@ class Flood extends Controller {
         $filters = array(
             'status' => $status,
             'level' => flood_in('level', '', $_GET),
+            'province' => flood_province_param(),
             'amphoe' => flood_in('amphoe', '', $_GET),
             'q' => flood_in('q', '', $_GET),
         );
@@ -382,6 +383,7 @@ class Flood extends Controller {
         $this->view->zonePhotoIds = $this->model->zonePhotoIds(array_map(function ($z) { return $z['zone_id']; }, $this->view->zoneRows));
         $this->view->zoneCounts = $this->model->zoneCounts();
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->canEdit = $this->isOfficer();
         $this->view->canImport = $this->isAdmin();
         $this->view->activeTab = 'zones';
@@ -438,6 +440,7 @@ class Flood extends Controller {
             }));
         $this->view->pendingReports = $this->model->pendingReportsForMap(200);
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->tambons = $this->model->getTambons();
         $this->view->activeTab = 'zones';
         $this->view->pageTitle = $zone ? 'แก้ไขพื้นที่ประกาศ' : 'ประกาศพื้นที่ใหม่';
@@ -860,7 +863,9 @@ class Flood extends Controller {
         }
         $impact = flood_in('impact', '', $_GET);
         $filters = array('status' => $status, 'q' => flood_in('q', '', $_GET),
-            'impact' => array_key_exists($impact, flood_area_impacts()) ? $impact : '');
+            'impact' => array_key_exists($impact, flood_area_impacts()) ? $impact : '',
+            'province' => flood_province_param());
+        $this->view->provinces = $this->model->getProvinces();
         $this->useMap();
         $this->view->js[] = 'flood/js/reports.js';
         $this->view->reportFilters = $filters;
@@ -1068,6 +1073,7 @@ class Flood extends Controller {
         $this->view->noticeCounts = $ready ? $nm->counts() : array('active' => 0, 'archived' => 0, 'unverified' => 0, 'by_cat' => array());
         $this->view->noticeCanEdit = $this->isOfficer();
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->activeTab = 'notices';
         $this->view->pageTitle = 'ข้อมูลที่ควรรู้';
         $this->view->rander('flood/notices');
@@ -1128,6 +1134,7 @@ class Flood extends Controller {
         $filters = array(
             'status' => $status,
             'priority' => flood_in('priority', '', $_GET),
+            'province' => flood_province_param(),
             'amphoe' => flood_in('amphoe', '', $_GET),
             'need' => flood_in('need', '', $_GET),
             'team_id' => (int) flood_in('team_id', 0, $_GET),
@@ -1145,6 +1152,7 @@ class Flood extends Controller {
         $this->view->helpMap = $this->model->openHelpForMap($isTeam ? $this->teamScope() : null);
         $this->view->teams = $this->model->getTeams(true);
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->isTeam = $isTeam;
         $this->view->canCreate = $this->isOfficer();
         $this->view->activeTab = 'help';
@@ -1159,6 +1167,7 @@ class Flood extends Controller {
         $this->view->js[] = '../public/js/flood-upload.js';
         $this->view->js[] = 'flood/js/help_form.js';
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->tambons = $this->model->getTambons();
         $this->view->activeTab = 'help';
         $this->view->pageTitle = 'รับเรื่องขอความช่วยเหลือ';
@@ -1364,6 +1373,7 @@ class Flood extends Controller {
         $this->requireMenu('vulnerable');
         $filters = array(
             'q' => flood_in('q', '', $_GET),
+            'province' => flood_province_param(),
             'amphoe' => flood_in('amphoe', '', $_GET),
             'tambon' => flood_in('tambon', '', $_GET),
             'group' => flood_in('group', '', $_GET),
@@ -1378,6 +1388,7 @@ class Flood extends Controller {
         $this->view->vSummary = $this->model->vulnerableSummary();
         $this->view->activeZones = array_map(array($this->model, 'zoneForMap'), $this->model->listZones(array('status' => 'active')));
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->tambons = $this->model->getTambons();
         $this->view->activeTab = 'vulnerable';
         $this->view->pageTitle = 'ทะเบียนกลุ่มเปราะบาง';
@@ -1399,6 +1410,7 @@ class Flood extends Controller {
         $this->view->person = $person;
         $this->view->activeZones = array_map(array($this->model, 'zoneForMap'), $this->model->listZones(array('status' => 'active')));
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->tambons = $this->model->getTambons();
         $this->view->activeTab = 'vulnerable';
         $this->view->pageTitle = $person ? 'แก้ไขข้อมูล ' . $person['name'] : 'เพิ่มในทะเบียนกลุ่มเปราะบาง';
@@ -1542,6 +1554,7 @@ class Flood extends Controller {
         $this->view->js[] = 'flood/js/teams.js';
         $this->view->teamRows = $this->model->getTeams(false);
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->activeTab = 'teams';
         $this->view->pageTitle = 'ทีมช่วยเหลือ';
         $this->view->rander('flood/teams');

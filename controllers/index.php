@@ -24,6 +24,7 @@ class Index extends Controller {
             $this->loadModel('flood');
         }
         $this->view->amphoes = $this->model->getAmphoes();
+        $this->view->provinces = $this->model->getProvinces();
         $this->view->zones = $this->model->publicZones();
         $this->view->points = $this->model->publicReportPoints();
         $this->view->counts = $this->model->zoneCounts();
@@ -59,8 +60,9 @@ class Index extends Controller {
         if (!$this->model) {
             $this->loadModel('flood');
         }
-        $st = array('amphoes' => 0, 'tambons' => 0, 'zones' => 0, 'points' => 0, 'pending' => 0);
+        $st = array('provinces' => 0, 'amphoes' => 0, 'tambons' => 0, 'zones' => 0, 'points' => 0, 'pending' => 0);
         try {
+            $st['provinces'] = count($this->model->getProvinces());
             $st['amphoes'] = count($this->model->getAmphoes());
             $st['tambons'] = count($this->model->getTambons());
             $c = $this->model->zoneCounts();
