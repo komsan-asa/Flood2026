@@ -33,6 +33,14 @@ foreach ($rows as $r) {
 </div>
 <?php } ?>
 
+<?php if (flood_public_pending_enabled() && $f['status'] === 'pending' && $c['pending']) { ?>
+<div class="alert alert-info rep-onmap-note">
+    <i class="fa fa-map-marker"></i>
+    รายงานที่ <b>รอตรวจสอบ</b> ทั้ง <?= (int) $c['pending'] ?> รายการ <b>ขึ้นแผนที่ประชาชนแล้ว</b> เป็นจุดสีเหลือง พร้อมป้าย <span class="sk-tag-pending">⏳ รอตรวจสอบ</span>
+    — กด <b>ตรวจ</b> เพื่อประกาศเป็นพื้นที่ / ยืนยัน / ไม่ใช้ข้อมูล (ไม่ใช้ข้อมูล = เอาออกจากแผนที่)
+</div>
+<?php } ?>
+
 <ul class="nav-tabs">
     <li class="<?= $f['status'] === 'pending' ? 'active' : '' ?>"><a href="<?= h($tab('pending')) ?>">รอตรวจสอบ <span class="count"><?= (int) $c['pending'] ?></span></a></li>
     <li class="<?= $f['status'] === 'waiting' ? 'active' : '' ?>"><a href="<?= h($tab('waiting')) ?>" title="ยืนยันแล้ว แต่ยังไม่ขึ้นแผนที่ประชาชน">รอประกาศ <span class="count<?= $c['waiting'] ? ' count-alert' : '' ?>"><?= (int) $c['waiting'] ?></span></a></li>
@@ -56,7 +64,7 @@ foreach ($rows as $r) {
     <div class="flood-card-body" style="padding:10px">
         <div id="reportsMap" class="flood-map map-sm"></div>
         <div class="map-legend" style="margin-top:6px">
-            <span><span class="sw" style="background:#1f78c1;border-radius:50%"></span>รอตรวจ</span>
+            <span><span class="sw" style="background:#1f78c1;border-radius:50%"></span>รอตรวจ<?= flood_public_pending_enabled() ? ' (ขึ้นแผนที่ประชาชนแล้ว)' : '' ?></span>
             <span><span class="sw" style="background:#ea580c;border-radius:50%"></span>ยืนยันแล้ว · รอประกาศ</span>
             <span><span class="sw" style="background:#16a34a;border-radius:50%"></span>ประกาศแล้ว</span>
             <span><span class="sw" style="background:#9ca3af;border-radius:50%"></span>ไม่ใช้ข้อมูล</span>
@@ -107,6 +115,9 @@ foreach ($rows as $r) {
                     </td>
                     <td data-label="สถานะ">
                         <?= flood_status_label($st, $r['view_status']) ?>
+                        <?php if ($r['status'] === 'pending' && flood_public_pending_enabled()) { ?>
+                        <div class="rep-onmap" title="ประชาชนเห็นจุดนี้บนแผนที่แล้ว พร้อมป้าย &quot;รอตรวจสอบ&quot;"><i class="fa fa-globe"></i> ขึ้นแผนที่ประชาชนแล้ว</div>
+                        <?php } ?>
                         <?php if ($r['zone_name']) { ?>
                         <div class="small-muted"><i class="fa fa-map"></i> <?= h($r['zone_name']) ?><?= $r['zone_status'] !== 'active' ? ' <span class="text-danger">(ปิดประกาศแล้ว)</span>' : '' ?></div>
                         <?php } elseif ($r['view_status'] === 'waiting') { ?>
@@ -162,5 +173,6 @@ foreach ($rows as $r) {
 
 <script>
     window.REPORTS = <?= flood_js($mapRows) ?>;
+    window.REPORT_PUBLIC_PENDING = <?= flood_public_pending_enabled() ? 'true' : 'false' ?>;
     window.REPORT_ZONES = <?= flood_js($this->activeZones) ?>;
 </script>

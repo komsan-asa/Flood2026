@@ -604,6 +604,11 @@ function flood_level_badge($code) {
 }
 
 /** ป้ายจากตัวเลือกที่มี 'class' (สถานะรายงาน / สถานะใบงาน / ความเร่งด่วน / สถานะอพยพ) */
+/** รายงานรอตรวจสอบแสดงบนแผนที่ประชาชน (ป้าย "รอตรวจสอบ") — ปิดได้ด้วย define('PUBLIC_SHOW_PENDING', false) */
+function flood_public_pending_enabled() {
+    return !defined('PUBLIC_SHOW_PENDING') || PUBLIC_SHOW_PENDING;
+}
+
 function flood_status_label($options, $code) {
     if (!isset($options[$code])) {
         return '<span class="label label-default">' . h($code) . '</span>';

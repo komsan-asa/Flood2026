@@ -130,3 +130,7 @@
 .sk-chips .sk-chip[hidden] { display: none !important; }
 .sk-chips.sk-chips-rg { margin-bottom: 8px; }
 .sk-chips-rg .sk-chip[aria-pressed="true"] { font-weight: 700; }
+/* หน้ารายงาน: รายงานรอตรวจที่ขึ้นแผนที่ประชาชนแล้ว */
+.rep-onmap { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; white-space: nowrap; }
+.rep-onmap-note .sk-tag-pending { vertical-align: 1px; }

@@ -108,7 +108,7 @@ $ddpm = flood_ddpm_phone();
             <?php } ?>
             <div class="ab-level ab-level-pend" style="--lv: #b45309">
                 <i class="fa fa-question-circle" aria-hidden="true"></i>
-                <div><b>รอตรวจสอบ</b><small>ประชาชนแจ้งเข้ามา เจ้าหน้าที่ยังไม่ยืนยัน (แสดง <?= (int) (defined('PUBLIC_PENDING_HOURS') ? PUBLIC_PENDING_HOURS : 48) ?> ชม.)</small></div>
+                <div><b>รอตรวจสอบ</b><small>ประชาชนแจ้งเข้ามา ขึ้นแผนที่ทันที จนกว่าเจ้าหน้าที่จะตรวจ</small></div>
             </div>
         </div>
     </section>

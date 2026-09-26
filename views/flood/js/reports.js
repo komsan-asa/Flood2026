@@ -92,7 +92,8 @@ $(function () {
         return '<div class="action-block"><h4>' + n + ') ไม่ใช้ข้อมูลนี้</h4>'
             + '<div class="flex flex-wrap gap-2"><input type="text" class="form-control input-sm" id="rmRejectNote" maxlength="255" style="flex:1 1 260px" '
             + 'placeholder="เหตุผล เช่น โทรยืนยันแล้วน้ำลดแล้ว / ข้อมูลซ้ำ / ติดต่อไม่ได้" />'
-            + '<button type="button" class="btn btn-default btn-sm" id="rmReject"><i class="fa fa-ban"></i> ไม่ใช้ข้อมูล</button></div></div>';
+            + '<button type="button" class="btn btn-default btn-sm" id="rmReject"><i class="fa fa-ban"></i> ไม่ใช้ข้อมูล</button></div>'
+            + (window.REPORT_PUBLIC_PENDING ? '<div class="help-block">ไม่ใช้ข้อมูล = เอาจุดออกจากแผนที่ประชาชน</div>' : '') + '</div>';
     }
 
     function reviewedInfo(r, withReopen) {
@@ -112,6 +113,11 @@ $(function () {
         }
         // รายงานรอตรวจ — ทั้งที่ประชาชนแจ้งเองและที่นำเข้าจากโพสต์ ต้องมีปุ่มประกาศ/ยืนยัน/ไม่ใช้ข้อมูลเหมือนกัน
         if (r.status === 'pending') {
+            if (window.REPORT_PUBLIC_PENDING) {
+                h.unshift('<div class="alert alert-info" style="margin:0 0 10px"><i class="fa fa-globe"></i> '
+                    + 'จุดนี้ <b>ขึ้นแผนที่ประชาชนแล้ว</b> เป็นจุดสีเหลือง พร้อมป้าย <span class="sk-tag-pending">⏳ รอตรวจสอบ</span> '
+                    + '— ประกาศเป็นพื้นที่ / ยืนยัน / ไม่ใช้ข้อมูล ด้านล่าง</div>');
+            }
             if (!r.source_url && r.phone_raw) {
                 h.push('<div class="action-block"><h4><i class="fa fa-phone"></i> แนะนำ: โทรยืนยันกับผู้แจ้งก่อน</h4>'
                     + '<a class="btn btn-default btn-sm" href="tel:' + esc(r.phone_raw) + '"><i class="fa fa-phone"></i> โทร ' + esc(r.reporter_phone) + '</a></div>');
@@ -122,7 +128,7 @@ $(function () {
                 + '<div class="flex flex-wrap gap-2"><input type="text" class="form-control input-sm" id="rmVerifyNote" maxlength="255" style="flex:1 1 260px" '
                 + 'placeholder="บันทึก (ถ้ามี) เช่น โทรยืนยันแล้ว รอดูสถานการณ์ / รอหัวหน้าอนุมัติ" />'
                 + '<button type="button" class="btn btn-warning btn-sm" id="rmVerify"><i class="fa fa-check"></i> ยืนยัน · รอประกาศ</button></div>'
-                + '<div class="help-block">รายงานจะไปอยู่แท็บ <b>รอประกาศ</b> กดประกาศภายหลังได้ (ยังไม่ขึ้นแผนที่ประชาชน)</div></div>');
+                + '<div class="help-block">รายงานจะไปอยู่แท็บ <b>รอประกาศ</b> กดประกาศภายหลังได้ (จุดจะ <b>ออกจากแผนที่ประชาชน</b> จนกว่าจะประกาศ)</div></div>');
             h.push(rejectBlock(a.n));
         } else if (r.view_status === 'waiting') {
             h.push('<div class="alert alert-warning" style="margin:0 0 10px"><i class="fa fa-bullhorn"></i> ยืนยันแล้ว แต่ <b>ยังไม่ได้ประกาศ</b> — ประชาชนยังไม่เห็นจุดนี้บนแผนที่</div>');

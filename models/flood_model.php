@@ -746,14 +746,15 @@ class Flood_Model extends Model {
 
     /**
      * จุดที่ประชาชนแจ้งเข้ามาแต่เจ้าหน้าที่ยังไม่ได้ตรวจ — แสดงบนแผนที่ทันทีพร้อมป้าย "รอตรวจสอบ"
-     * เฉพาะ 48 ชั่วโมงล่าสุด (ปรับได้ด้วย PUBLIC_PENDING_HOURS · ปิดทั้งหมดด้วย define('PUBLIC_SHOW_PENDING', false))
+     * แสดงจนกว่าเจ้าหน้าที่จะตรวจ (จำกัดเฉพาะ N ชั่วโมงล่าสุดได้ด้วย PUBLIC_PENDING_HOURS · ปิดทั้งหมดด้วย define('PUBLIC_SHOW_PENDING', false))
      * ไม่ส่งชื่อ เบอร์ หรือข้อความจุดสังเกตของผู้แจ้ง · ไม่ผลกับตัวเลขพื้นที่ประกาศ
      */
     private function publicPendingPoints($amphoe = '', $province = '', $region = '') {
-        if (defined('PUBLIC_SHOW_PENDING') && !PUBLIC_SHOW_PENDING) {
+        if (!flood_public_pending_enabled()) {
             return array();
         }
-        $hours = defined('PUBLIC_PENDING_HOURS') ? max(1, (int) PUBLIC_PENDING_HOURS) : 48;
+        // 0 / ไม่ตั้ง = แสดงทุกรายการที่ยังรอตรวจ (ไม่หายเองตามเวลา)
+        $hours = defined('PUBLIC_PENDING_HOURS') ? max(0, (int) PUBLIC_PENDING_HOURS) : 0;
         $impactCol = $this->reportImpactsReady() ? 'r.impacts' : 'NULL';
         $sourceCol = $this->reportSourceReady() ? 'r.source_url' : 'NULL';
         $rows = $this->db->select(
@@ -763,7 +764,7 @@ class Flood_Model extends Model {
              WHERE r.status = 'pending' AND r.created_at >= :t
              ORDER BY r.created_at DESC
              LIMIT 500",
-            array(':t' => date('Y-m-d H:i:s', time() - $hours * 3600))
+            array(':t' => $hours > 0 ? date('Y-m-d H:i:s', time() - $hours * 3600) : '2000-01-01 00:00:00')
         );
         if (!$rows) {
             return array();
