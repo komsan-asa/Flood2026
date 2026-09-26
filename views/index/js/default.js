@@ -420,15 +420,15 @@ $(function () {
         data.points.forEach(function (p) { perZone[p.zone_id] = (perZone[p.zone_id] || 0) + 1; });
         zs.forEach(function (z) {
             var nPt = perZone[z.zone_id] || 0;
-            var area = (z.tambon_name ? 'ต.' + esc(z.tambon_name) + ' ' : '') + (z.amphoe_name ? 'อ.' + esc(z.amphoe_name) : '');
+            var area = esc(FloodMap.areaLabel(z));
             var lv = FloodMap.level(z.level);
             $list.append(
                 '<button type="button" class="sk-zone lv-' + esc(z.level) + '" data-id="' + esc(z.zone_id) + '">'
                 + '<span class="sk-zone-dot" aria-hidden="true"></span>'
-                + '<span class="sk-zone-body"><span class="sk-zone-name">' + esc(z.name) + '</span>'
+                + '<span class="sk-zone-body"><span class="sk-zone-name">' + esc(z.name) + FloodMap.pendingTag(z) + '</span>'
                 + '<span class="sk-zone-meta">' + (area ? area + ' · ' : '') + 'ประกาศ ' + esc(z.started_th || '')
                 + (nPt ? ' · <span class="sk-zone-pts">📍 ' + nPt + ' จุดแจ้ง</span>' : '') + '</span>'
-                + (z.note ? '<span class="sk-zone-note">' + esc(z.note) + '</span>' : '')
+                + (z.note ? '<span class="sk-zone-note">' + esc(String(z.note).replace(/\s*—?\s*https?:\/\/\S+/g, '')) + '</span>' : '')
                 + '</span><span class="sk-zone-lv">' + esc(lv.name) + '</span>'
                 + '<span class="sk-zone-go">' + IC.go + '</span></button>'
             );
@@ -653,22 +653,22 @@ $(function () {
         var lv = FloodMap.level(z.level);
         var pts = zonePoints(z.zone_id);
         var photos = $.isArray(z.photos) ? z.photos : [];
-        var area = [z.tambon_name ? 'ต.' + z.tambon_name : '', z.amphoe_name ? 'อ.' + z.amphoe_name : '']
-            .filter(Boolean).join(' ');
+        var area = FloodMap.areaLabel(z);
         var h = '<div class="sk-dt-bar">'
             + '<button type="button" class="sk-dt-back" id="pubDetailBack">' + IC.back + 'รายการพื้นที่</button>'
             + '<button type="button" class="sk-dt-map" title="เลื่อนแผนที่ไปที่พื้นที่นี้">' + IC.target + 'ดูบนแผนที่</button>'
             + '</div>';
 
         h += '<div class="sk-dt-head lv-' + esc(z.level) + '">'
-            + '<span class="lv-badge lv-' + esc(z.level) + '" style="background:' + esc(lv.badge || lv.color) + '">' + esc(lv.name) + '</span>'
+            + '<span class="lv-badge lv-' + esc(z.level) + '" style="background:' + esc(lv.badge || lv.color) + '">' + esc(lv.name) + '</span>' + FloodMap.pendingTag(z)
             + '<h2 class="sk-dt-name" tabindex="-1">' + esc(z.name) + '</h2>'
             + '<div class="sk-dt-meta">' + esc([area, z.started_th ? 'ประกาศ ' + z.started_th : ''].filter(Boolean).join(' · ')) + '</div>'
             + voteHtml(+z.zone_id)
             + '</div>';
 
         if (z.note) {
-            h += section('ประกาศจากเจ้าหน้าที่', '', '<div class="sk-dt-note">' + esc(z.note) + '</div>');
+            h += section(z.source === 'web' ? 'ข้อมูลจากข่าว/โซเชียล (ยังไม่ตรวจสอบ)' : 'ประกาศจากเจ้าหน้าที่', '',
+                '<div class="sk-dt-note">' + FloodMap.linkNote(z.note) + '</div>');
         }
 
         if (pts.length) {

@@ -25,6 +25,7 @@ $icons = array(
         </span>
     </a>
     <nav class="sk-top-links" aria-label="เมนู">
+        <a href="<?= URL ?>index/situation" class="sk-btn sk-btn-ghost">ทั่วประเทศ</a>
         <a href="<?= URL ?>sos/status" class="sk-btn sk-btn-ghost">ติดตามคำขอ</a>
         <a href="<?= URL ?>login" class="sk-btn sk-btn-ghost">เจ้าหน้าที่</a>
     </nav>
@@ -45,6 +46,7 @@ $icons = array(
             <span class="sk-visit-item">👥 วันนี้ <b data-visit="today_visitors"><?= number_format((int) ($vs['today_visitors'] ?? 0)) ?></b> คน</span>
             <span class="sk-visit-item">👁 เข้าชมทั้งหมด <b data-visit="total_views"><?= number_format((int) ($vs['total_views'] ?? 0)) ?></b> ครั้ง</span>
         </div>
+        <a href="<?= URL ?>index/situation" class="sk-nat-link"><span aria-hidden="true">📊</span><span><b>สถานการณ์ทั่วประเทศรายวัน</b><small>สรุปจาก ปภ. ข่าว และโซเชียล ตั้งแต่ 22 ก.ย. 69</small></span><i aria-hidden="true">›</i></a>
         <!-- ตัวกรอง (แบบเดียวกับหน้าเจ้าหน้าที่) — ภาค/จังหวัด/อำเภอ สร้างจาก PUBLIC_DATA (views/index/js/default.js) -->
         <form class="sk-filter" id="pubFilter" role="search" aria-label="กรองพื้นที่ประกาศ" onsubmit="return false">
             <select id="pubFLevel" class="sk-fsel" aria-label="ระดับ">
@@ -87,7 +89,7 @@ $icons = array(
                 <summary>
                     <span class="sk-news-ic" aria-hidden="true"><i class="fa <?= h($nc['icon']) ?>"></i></span>
                     <span class="sk-news-body">
-                        <span class="sk-news-cat"><?= h($nc['name']) ?></span>
+                        <span class="sk-news-cat"><?= h($nc['name']) ?><?php if (!empty($n['is_pinned'])) { ?> <span class="sk-news-pin">📌 ปักหมุด</span><?php } ?></span>
                         <span class="sk-news-title"><?= h($n['title']) ?><?php if (isset($n['verify']) && $n['verify'] === 'announced') { ?> <span class="sk-tag-pending">⏳ รอตรวจสอบ</span><?php } ?></span>
                         <span class="sk-news-meta"><?= h(trim((string) $n['place'] . ($n['amphoe_name'] ? ' · อ.' . $n['amphoe_name'] : ''), ' ·')) ?><?= ($n['place'] || $n['amphoe_name']) ? ' · ' : '' ?><?= h(flood_ago($n['info_at'])) ?></span>
                     </span>
@@ -127,7 +129,7 @@ $icons = array(
         <?php } ?>
         <p class="sk-privacy">
             แผนที่นี้แสดงเฉพาะขอบเขตพื้นที่ที่เจ้าหน้าที่ประกาศ ไม่มีข้อมูลส่วนบุคคลของผู้ใด
-            <span class="sk-privacy-links">· <a href="<?= URL ?>sos/status">ติดตามคำขอความช่วยเหลือ</a> · <a href="<?= URL ?>login">เจ้าหน้าที่</a> · <a href="<?= URL ?>index/about">เกี่ยวกับระบบ</a></span>
+            <span class="sk-privacy-links">· <a href="<?= URL ?>sos/status">ติดตามคำขอความช่วยเหลือ</a> · <a href="<?= URL ?>login">เจ้าหน้าที่</a> · <a href="<?= URL ?>index/situation">สถานการณ์ทั่วประเทศ</a> · <a href="<?= URL ?>index/about">เกี่ยวกับระบบ</a></span>
         </p>
         <p class="sk-dev-credit">Developed by Komsan Asa</p>
     </div>

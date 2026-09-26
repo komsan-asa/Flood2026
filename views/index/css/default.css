@@ -328,6 +328,24 @@
     .sk-rp { padding: 11px 12px; }
 }
 
+/* ป้าย "ปักหมุด" ในข้อมูลที่ควรรู้ — หน้าประชาชนเรียงข่าวล่าสุดไว้บนเสมอ รายการที่ปักหมุดจึงบอกด้วยป้ายแทน */
+.sk-news-pin {
+    display: inline-block; margin-left: 4px; padding: 0 7px; border-radius: 999px; background: #fff4e0; color: #b45309;
+    font-size: 10.5px; font-weight: 600; line-height: 16px; vertical-align: 1px; white-space: nowrap;
+}
+
+/* ลิงก์หน้าสถานการณ์ทั่วประเทศ (index/situation) */
+.sk-nat-link {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 10px 12px; border-radius: 14px;
+    background: linear-gradient(135deg, #fff, var(--sk-primary-soft)); border: 1px solid var(--sk-line);
+    color: var(--sk-ink); text-decoration: none;
+}
+.sk-nat-link:hover, .sk-nat-link:focus { text-decoration: none; color: var(--sk-ink); border-color: var(--sk-primary-2); }
+.sk-nat-link > span:first-child { font-size: 22px; line-height: 1; }
+.sk-nat-link b { display: block; font-size: 14.5px; }
+.sk-nat-link small { display: block; font-size: 12px; color: var(--sk-muted); }
+.sk-nat-link i { margin-left: auto; font-style: normal; font-size: 22px; color: var(--sk-primary); }
+.sk-dt-note a, .leaflet-popup-content .fm-note a { color: var(--sk-primary); font-weight: 600; }
 /* ---------- ตัวกรองบนแผง (ระดับ · ภาค · จังหวัด · อำเภอ · ค้นหา) ---------- */
 .sk-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 16px; }
 .sk-fsel, .sk-fsearch input {
