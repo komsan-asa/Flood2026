@@ -327,3 +327,25 @@
     .sk-dt-k { padding-right: 10px; }
     .sk-rp { padding: 11px 12px; }
 }
+
+/* ---------- ตัวกรองบนแผง (ระดับ · ภาค · จังหวัด · อำเภอ · ค้นหา) ---------- */
+.sk-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 16px; }
+.sk-fsel, .sk-fsearch input {
+    width: 100%; height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--sk-line);
+    background: rgba(255, 255, 255, .92); color: var(--sk-ink); font: 500 14px var(--sk-font); min-width: 0;
+}
+.sk-fsel { padding-right: 28px; appearance: none; -webkit-appearance: none; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b7896' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 14px; }
+.sk-fsel:disabled { opacity: .55; cursor: not-allowed; }
+.sk-fsel[hidden] { display: none; }
+.sk-fsel:focus, .sk-fsearch input:focus { outline: none; border-color: var(--sk-primary-2); box-shadow: 0 0 0 3px rgba(47, 127, 201, .15); }
+.sk-fsearch { grid-column: 1 / -1; position: relative; }
+.sk-fsearch svg { position: absolute; left: 12px; top: 50%; width: 16px; height: 16px; margin-top: -8px; color: var(--sk-muted); pointer-events: none; }
+.sk-fsearch input { padding-left: 36px; }
+.sk-freset { grid-column: 1 / -1; justify-self: start; border: 0; background: var(--sk-primary-soft); color: var(--sk-primary);
+    font: 600 12.5px var(--sk-font); padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+@media (max-width: 767px) {
+    .sk-filter { gap: 6px; margin-bottom: 12px; }
+    .sk-fsel, .sk-fsearch input { height: 38px; font-size: 13.5px; }
+}

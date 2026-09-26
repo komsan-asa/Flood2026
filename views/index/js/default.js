@@ -169,20 +169,43 @@ $(function () {
         return !levelFilter || level === levelFilter;
     }
 
+    /* ค้นหาข้อความ (ชื่อพื้นที่ / ข้อความประกาศ / ตำบล / อำเภอ) — กรองในเครื่อง ไม่ต้องโหลดใหม่ */
+    var textFilter = '';
+    function norm(t) {
+        return String(t || '').toLowerCase().replace(/\s+/g, '');
+    }
+    function matchText(z) {
+        if (!textFilter) {
+            return true;
+        }
+        return norm([z.name, z.note, z.tambon_name, z.amphoe_name].join(' ')).indexOf(textFilter) >= 0;
+    }
+    function zoneShown(z) {
+        return inFilter(z.level) && matchText(z);
+    }
+
     /** พื้นที่ในรายการ — ตามตัวกรองระดับ */
     function listZones() {
-        return data.zones.filter(function (z) { return inFilter(z.level); });
+        return data.zones.filter(zoneShown);
     }
 
     /** พื้นที่บนแผนที่ — ตามตัวกรอง + พื้นที่ที่เปิดรายละเอียดอยู่เสมอ (เช่น รีเฟรชแล้วเปลี่ยนระดับจนไม่ตรงตัวกรอง) */
     function visibleZones() {
-        return data.zones.filter(function (z) { return inFilter(z.level) || +z.zone_id === detailId; });
+        return data.zones.filter(function (z) { return zoneShown(z) || +z.zone_id === detailId; });
     }
 
     function visiblePoints() {
         // จุดรอตรวจสอบยังไม่มีระดับ — ไม่แสดงตอนกรองระดับ · จุดของพื้นที่ที่เปิดดูอยู่แสดงเสมอ
         return data.points.filter(function (p) {
-            return !levelFilter || (!p.pending && (p.level === levelFilter || +p.zone_id === detailId));
+            if (+p.zone_id && +p.zone_id === detailId) {
+                return true;
+            }
+            if (textFilter) {
+                // ค้นหาอยู่ — แสดงเฉพาะจุดของพื้นที่ที่ตรงคำค้น
+                var z = p.pending ? null : zoneById(p.zone_id);
+                return !!z && zoneShown(z);
+            }
+            return !levelFilter || (!p.pending && p.level === levelFilter);
         });
     }
 
@@ -888,6 +911,8 @@ $(function () {
         } else {
             $('#pubLevelClear').prop('hidden', true);
         }
+        $('#pubFLevel').val(levelFilter);
+        $('#pubFReset').prop('hidden', !(levelFilter || textFilter || regionFilter || provinceFilter || amphoeFilter));
     }
 
     // นับถอยหลังถึงการดึงข้อมูลรอบถัดไป (ทุก 2 นาที) แสดงต่อจากเวลาอัปเดต
@@ -1021,57 +1046,55 @@ $(function () {
         renderAll();
     });
 
-    $('#pubAmphoe').on('click', '.sk-chip', function () {
-        var $b = $(this);
-        amphoeFilter = String($b.attr('data-amphoe') || '');
-        amphoeName = amphoeFilter ? $b.text() : '';
-        $('#pubAmphoe .sk-chip').attr('aria-pressed', 'false');
-        $b.attr('aria-pressed', 'true');
-        firstFit = true;
-        reload();
-    });
-
-    /* ---------- ภาค → จังหวัด → อำเภอ ---------- */
-    function chip(attr, code, label, on) {
-        return '<button type="button" class="sk-chip" data-' + attr + '="' + esc(code) + '" aria-pressed="' + (on ? 'true' : 'false') + '">'
-            + esc(label) + '</button>';
+    /* ---------- ตัวกรอง: ระดับ · ภาค → จังหวัด → อำเภอ · ค้นหา ---------- */
+    var $fRegion = $('#pubFRegion');
+    var $fProvince = $('#pubFProvince');
+    var $fAmphoe = $('#pubFAmphoe');
+    function opt(v, label, sel) {
+        return '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(label) + '</option>';
     }
-    function renderProvinceChips() {
-        var $w = $('#pubProvince');
-        if (!$w.length) {
-            return;
-        }
-        var list = (data.provinces || []).filter(function (p) { return !regionFilter || p.region === regionFilter; });
-        var html = chip('province', '', regionFilter ? 'ทุกจังหวัด' : 'ทุกจังหวัด', !provinceFilter);
-        list.forEach(function (p) { html += chip('province', p.code, p.name, p.code === provinceFilter); });
-        $w.html(html);
-        // มีหลายภาค: แสดงแถวจังหวัดเมื่อเลือกภาคแล้ว (ทั้งประเทศ 77 ปุ่มยาวเกินไป)
-        $w.prop('hidden', !!$('#pubRegionChips').length && !regionFilter);
-    }
-    function renderAmphoeChips() {
-        var $w = $('#pubAmphoe');
-        if (!$('#pubProvince').length) {
-            return;   // จังหวัดเดียว — ปุ่มอำเภอสร้างจากเซิร์ฟเวอร์แล้ว
-        }
-        if (!provinceFilter) {
-            $w.empty().prop('hidden', true);
-            return;
-        }
-        var html = chip('amphoe', '', 'ทุกอำเภอ', !amphoeFilter);
-        (data.amphoes || []).forEach(function (a) {
-            if (String(a[0]).substring(0, 2) === provinceFilter) {
-                html += chip('amphoe', a[0], a[1], a[0] === amphoeFilter);
+    function fillProvinces() {
+        var html = opt('', 'ทุกจังหวัด', !provinceFilter);
+        var groups = {};
+        var order = [];
+        (data.provinces || []).forEach(function (p) {
+            if (regionFilter && p.region !== regionFilter) {
+                return;
             }
+            var g = p.region || '';
+            if (!groups[g]) {
+                groups[g] = [];
+                order.push(g);
+            }
+            groups[g].push(p);
         });
-        $w.html(html).prop('hidden', false);
+        order.forEach(function (g) {
+            var items = groups[g].map(function (p) { return opt(p.code, 'จ.' + p.name, p.code === provinceFilter); }).join('');
+            var r = regionInfo(g);
+            html += order.length > 1 && r ? '<optgroup label="' + esc(r.name) + '">' + items + '</optgroup>' : items;
+        });
+        $fProvince.html(html);
+    }
+    function fillAmphoes() {
+        var single = (data.provinces || []).length <= 1;
+        var html = opt('', 'ทุกอำเภอ', !amphoeFilter);
+        if (provinceFilter || single) {
+            (data.amphoes || []).forEach(function (a) {
+                if (single || String(a[0]).substring(0, 2) === provinceFilter) {
+                    html += opt(a[0], 'อ.' + a[1], a[0] === amphoeFilter);
+                }
+            });
+        }
+        $fAmphoe.html(html).prop('disabled', !(provinceFilter || single));
     }
     function syncUrl() {
-        // จำภาค/จังหวัดไว้ใน URL — แชร์ลิงก์แล้วเปิดตรงที่เดิม
+        // จำภาค/จังหวัด/อำเภอไว้ใน URL — แชร์ลิงก์แล้วเปิดตรงที่เดิม
         try {
             var u = new URL(window.location.href);
-            u.searchParams.delete('region');
-            u.searchParams.delete('province');
-            if (provinceFilter) {
+            ['region', 'province', 'amphoe'].forEach(function (k) { u.searchParams.delete(k); });
+            if (amphoeFilter) {
+                u.searchParams.set('amphoe', amphoeFilter);
+            } else if (provinceFilter) {
                 u.searchParams.set('province', provinceFilter);
             } else if (regionFilter) {
                 u.searchParams.set('region', regionFilter);
@@ -1080,19 +1103,17 @@ $(function () {
         } catch (e) { /* เบราว์เซอร์เก่า */ }
     }
     function applyArea(silent) {
-        amphoeFilter = '';
-        amphoeName = '';
-        $('#pubRegionChips .sk-chip').each(function () {
-            $(this).attr('aria-pressed', String(String($(this).attr('data-region') || '') === regionFilter));
-        });
-        renderProvinceChips();
-        renderAmphoeChips();
-        $('#pubRegion').text(provinceName ? 'จ.' + provinceName : (regionLabel || areaName));
+        $fRegion.val(regionFilter);
+        fillProvinces();
+        fillAmphoes();
+        $('#pubRegion').text(amphoeName ? 'อ.' + amphoeName + (provinceName ? ' จ.' + provinceName : '')
+            : (provinceName ? 'จ.' + provinceName : (regionLabel || areaName)));
         syncUrl();
         if (!silent) {
             firstFit = true;
             reload();
         }
+        renderAll();
     }
     function setRegion(code, silent) {
         var r = code ? regionInfo(code) : null;
@@ -1100,12 +1121,16 @@ $(function () {
         regionLabel = r ? r.name : '';
         provinceFilter = '';
         provinceName = '';
+        amphoeFilter = '';
+        amphoeName = '';
         applyArea(silent);
     }
     function setProvince(code, silent) {
         var p = code ? provinceInfo(code) : null;
         provinceFilter = p ? p.code : '';
         provinceName = p ? p.name : '';
+        amphoeFilter = '';
+        amphoeName = '';
         if (p && p.region) {
             var r = regionInfo(p.region);
             regionFilter = r ? r.code : regionFilter;
@@ -1113,11 +1138,45 @@ $(function () {
         }
         applyArea(silent);
     }
-    $('#pubRegionChips').on('click', '.sk-chip', function () {
-        setRegion(String($(this).attr('data-region') || ''));
+    function setAmphoe(code, silent) {
+        var a = null;
+        (data.amphoes || []).forEach(function (x) {
+            if (x[0] === code) {
+                a = x;
+            }
+        });
+        if (a && String(a[0]).substring(0, 2) !== provinceFilter && (data.provinces || []).length > 1) {
+            setProvince(String(a[0]).substring(0, 2), true);
+        }
+        amphoeFilter = a ? a[0] : '';
+        amphoeName = a ? a[1] : '';
+        applyArea(silent);
+    }
+    $fRegion.on('change', function () { setRegion(String($(this).val() || '')); });
+    $fProvince.on('change', function () { setProvince(String($(this).val() || '')); });
+    $fAmphoe.on('change', function () { setAmphoe(String($(this).val() || '')); });
+    $('#pubFLevel').on('change', function () {
+        levelFilter = String($(this).val() || '');
+        firstFit = true;
+        renderAll();
     });
-    $('#pubProvince').on('click', '.sk-chip', function () {
-        setProvince(String($(this).attr('data-province') || ''));
+    var textTimer = null;
+    $('#pubFText').on('input search', function () {
+        var v = norm($(this).val());
+        clearTimeout(textTimer);
+        textTimer = setTimeout(function () {
+            if (v !== textFilter) {
+                textFilter = v;
+                firstFit = true;
+                renderAll();
+            }
+        }, 200);
+    });
+    $('#pubFReset').on('click', function () {
+        levelFilter = '';
+        textFilter = '';
+        $('#pubFText').val('');
+        setRegion('');
     });
 
     $('#pubHandle').on('click', function () {
@@ -1125,12 +1184,14 @@ $(function () {
     });
 
     renderAll();
-    if (data.province) {
-        setProvince(data.province);   // เปิดจากลิงก์ ?province=27
+    if (data.amphoe) {
+        setAmphoe(data.amphoe);       // เปิดจากลิงก์ ?amphoe=2706
+    } else if (data.province) {
+        setProvince(data.province);   // ?province=27
     } else if (data.region) {
         setRegion(data.region);       // ?region=east
     } else {
-        renderProvinceChips();
+        applyArea(true);
     }
 
     // ลิงก์ตรงถึงพื้นที่ (#zone-12) — ส่งต่อในไลน์แล้วเปิดมาที่รายละเอียดเลย

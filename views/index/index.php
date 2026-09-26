@@ -45,6 +45,24 @@ $icons = array(
             <span class="sk-visit-item">👥 วันนี้ <b data-visit="today_visitors"><?= number_format((int) ($vs['today_visitors'] ?? 0)) ?></b> คน</span>
             <span class="sk-visit-item">👁 เข้าชมทั้งหมด <b data-visit="total_views"><?= number_format((int) ($vs['total_views'] ?? 0)) ?></b> ครั้ง</span>
         </div>
+        <!-- ตัวกรอง (แบบเดียวกับหน้าเจ้าหน้าที่) — ภาค/จังหวัด/อำเภอ สร้างจาก PUBLIC_DATA (views/index/js/default.js) -->
+        <form class="sk-filter" id="pubFilter" role="search" aria-label="กรองพื้นที่ประกาศ" onsubmit="return false">
+            <select id="pubFLevel" class="sk-fsel" aria-label="ระดับ">
+                <option value="">ทุกระดับ</option>
+                <?php foreach ($levels as $code => $l) { ?><option value="<?= h($code) ?>"><?= h($l['name']) ?></option><?php } ?>
+            </select>
+            <select id="pubFRegion" class="sk-fsel" aria-label="ภาค"<?= count((array) $this->regions) > 1 ? '' : ' hidden' ?>>
+                <option value="">ทุกภาค</option>
+                <?php foreach ((array) $this->regions as $r) { ?><option value="<?= h($r['region']) ?>"><?= h($r['name']) ?></option><?php } ?>
+            </select>
+            <select id="pubFProvince" class="sk-fsel" aria-label="จังหวัด"<?= count((array) $this->provinces) > 1 ? '' : ' hidden' ?>><option value="">ทุกจังหวัด</option></select>
+            <select id="pubFAmphoe" class="sk-fsel" aria-label="อำเภอ"><option value="">ทุกอำเภอ</option></select>
+            <div class="sk-fsearch">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                <input type="search" id="pubFText" placeholder="ค้นหาชื่อพื้นที่ / ข้อความ / ตำบล" aria-label="ค้นหาพื้นที่" autocomplete="off" />
+            </div>
+            <button type="button" class="sk-freset" id="pubFReset" hidden>ล้างตัวกรอง ✕</button>
+        </form>
         <p class="sk-eyebrow" id="pubOverview">ภาพรวมทั้งจังหวัด · แตะเพื่อกรอง</p>
         <div class="sk-bento" id="pubKpis">
             <?php foreach ($levels as $code => $l) { ?>
@@ -89,27 +107,6 @@ $icons = array(
         <div class="sk-list-head">
             <p class="sk-eyebrow" style="margin:0">พื้นที่ประกาศ <b id="pubTotal"><?= (int) ($counts['total'] ?? 0) ?></b> แห่ง · จุดแจ้ง <b id="pubPoints"><?= count(array_filter((array) $this->points, function ($p) { return empty($p['pending']); })) ?></b> จุด<span class="sk-pend-wrap" hidden> · รอตรวจสอบ <b id="pubPending">0</b></span></p>
             <button type="button" class="sk-clear" id="pubLevelClear" hidden>ล้างตัวกรอง <b id="pubLevelName"></b> ✕</button>
-        </div>
-        <?php $multiRg = count((array) $this->regions) > 1; $multiPv = count((array) $this->provinces) > 1; ?>
-        <?php if ($multiRg) { ?>
-        <div class="sk-chips sk-chips-rg" id="pubRegionChips" role="group" aria-label="เลือกภาค">
-            <button type="button" class="sk-chip" data-region="" aria-pressed="true">ทั้งประเทศ</button>
-            <?php foreach ($this->regions as $r) { ?>
-            <button type="button" class="sk-chip" data-region="<?= h($r['region']) ?>" aria-pressed="false"><?= h($r['name']) ?></button>
-            <?php } ?>
-        </div>
-        <?php } ?>
-        <?php if ($multiPv) { ?>
-        <!-- จังหวัด/อำเภอ สร้างจาก PUBLIC_DATA ตามภาค/จังหวัดที่เลือก (views/index/js/default.js) -->
-        <div class="sk-chips sk-chips-pv" id="pubProvince" role="group" aria-label="เลือกจังหวัด"<?= $multiRg ? ' hidden' : '' ?>></div>
-        <?php } ?>
-        <div class="sk-chips" id="pubAmphoe" role="group" aria-label="เลือกอำเภอ"<?= $multiPv ? ' hidden' : '' ?>>
-            <?php if (!$multiPv) { ?>
-            <button type="button" class="sk-chip" data-amphoe="" aria-pressed="true">ทุกอำเภอ</button>
-            <?php foreach ($this->amphoes as $a) { ?>
-            <button type="button" class="sk-chip" data-amphoe="<?= h($a['amphoe_code']) ?>" aria-pressed="false"><?= h($a['name']) ?></button>
-            <?php } ?>
-            <?php } ?>
         </div>
         <div id="pubList" class="sk-zones" aria-live="polite"></div>
 
@@ -162,10 +159,11 @@ $icons = array(
             return array('code' => $p['province_code'], 'name' => $p['name'], 'region' => $p['region'], 'lat' => $p['lat'], 'lng' => $p['lng']);
         }, (array) $this->provinces),
         // อำเภอแบบย่อ [รหัส, ชื่อ] — สร้างปุ่มเมื่อเลือกจังหวัด
-        'amphoes' => count((array) $this->provinces) > 1 ? array_map(function ($a) {
+        'amphoes' => array_map(function ($a) {
             return array($a['amphoe_code'], $a['name']);
-        }, (array) $this->amphoes) : array(),
+        }, (array) $this->amphoes),
         'region' => flood_region_param('region'),
         'province' => flood_province_param('province'),
+        'amphoe' => preg_match('/^\d{4}$/', flood_in('amphoe', '', $_GET)) ? flood_in('amphoe', '', $_GET) : '',
     )) ?>;
 </script>
