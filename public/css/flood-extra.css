@@ -134,3 +134,26 @@
 .rep-onmap { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
     background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; white-space: nowrap; }
 .rep-onmap-note .sk-tag-pending { vertical-align: 1px; }
+
+/* ---------- คำเตือนช่วงทดสอบระบบ (หน้า /sos) — แถบเหลืองลายเตือนให้เห็นชัด ---------- */
+.pub-test-warn {
+    position: relative; display: flex; align-items: flex-start; gap: 12px; margin: 12px 0 4px; padding: 16px 16px 14px;
+    border-radius: 16px; background: #fef08a; border: 2px solid #eab308; color: #713f12;
+    box-shadow: 0 10px 26px -14px rgba(202, 138, 4, .9); overflow: hidden;
+    animation: ptw-pulse 2.4s ease-in-out infinite;
+}
+.pub-test-warn::before {   /* ลายทางเหลือง-ดำด้านบน */
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px;
+    background: repeating-linear-gradient(-45deg, #1f2937 0 10px, #facc15 10px 20px);
+}
+.pub-test-warn .ptw-ic { flex: none; font-size: 30px; line-height: 1; margin-top: 4px; }
+.pub-test-warn .ptw-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pub-test-warn .ptw-txt b { font-size: 19px; font-weight: 800; color: #b91c1c; letter-spacing: .2px; }
+.pub-test-warn .ptw-txt span { font-size: 15.5px; font-weight: 600; line-height: 1.5; }
+.pub-test-warn u { text-decoration-color: #b91c1c; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+@keyframes ptw-pulse { 0%, 100% { border-color: #eab308; } 50% { border-color: #dc2626; } }
+@media (prefers-reduced-motion: reduce) { .pub-test-warn { animation: none; } }
+
+/* หน้าแผนที่ประชาชน: ผู้พัฒนา + การอนุญาตใช้โลโก้ */
+.sk-credit { margin: 14px 2px 0; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .7);
+    border: 1px solid var(--sk-line, #d3e4f6); font-size: 11.5px; line-height: 1.55; color: var(--sk-muted, #5b7896); }

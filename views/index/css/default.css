@@ -373,3 +373,52 @@
 .sk-fnear:hover { border-color: var(--sk-primary-2); color: var(--sk-primary); }
 .sk-fnear:disabled { opacity: .6; cursor: progress; }
 .sk-fbtns .sk-freset { grid-column: auto; }
+
+/* ---------- มือถือ: จัดปุ่มบนแผนที่ไม่ให้ทับกัน (26 ก.ย. 69) ----------
+ * แถบบน 2 แถว: ชื่อ/เวลาอัปเดต เต็มแถว → ปุ่มโทร 1784 | 1669 แบ่งครึ่ง
+ * ปุ่มลอย (ข้อมูลที่ควรรู้ · แจ้งจุดน้ำท่วม · SOS) เรียงเป็นแถวเดียวเหนือแผ่นเลื่อน ไม่ซ้อนขึ้นไปบังกลางแผนที่
+ * ปุ่ม "ดูทั้งหมด" วางใต้ขอบล่างจริงของแถบบน (placeZoom ใน default.js) */
+@media (max-width: 767px) {
+    .sk-top {
+        flex-wrap: wrap; row-gap: 8px; column-gap: 8px;
+        top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; padding: 8px;
+    }
+    .sk-brand { flex: 1 1 100%; min-width: 0; padding-left: 2px; }
+    .sk-brand-text b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sk-top .sk-call { flex: 1 1 0; min-width: 0; min-height: 46px; justify-content: center; padding: 0 8px; gap: 7px; border-radius: 14px; }
+    .sk-call .sk-call-txt { min-width: 0; max-width: 100%; }
+    .sk-call .sk-call-txt small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; }
+    .sk-call .sk-call-txt b { font-size: 17px; }
+
+    .sk-fab {
+        left: 10px; right: 10px; bottom: calc(42vh + 10px); bottom: calc(42dvh + 10px);
+        flex-direction: row; align-items: center; justify-content: flex-end; gap: 8px;
+        pointer-events: none;   /* ช่องว่างระหว่างปุ่มยังแตะแผนที่ได้ */
+    }
+    .sk-fab > * { flex: none; pointer-events: auto; }
+    .sk-panel.open ~ .sk-fab > * { pointer-events: none; }
+    .sk-news-fab { min-height: 46px; padding: 0 12px; border-radius: 16px; font-size: 15px; }
+    .sk-news-fab .sk-fab-txt { display: none; }   /* เหลือ 📢 + จำนวน */
+    .sk-fab-report { min-height: 46px; padding: 0 14px 0 11px; border-radius: 16px; font-size: 15px; }
+    .sk-sos-row { gap: 0; }
+    .sk-sos { width: 56px; height: 56px; font-size: 15px; }
+    .sk-sos::before, .sk-sos::after { animation-name: sk-ring-sm; }
+}
+@keyframes sk-ring-sm { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.3); opacity: 0; } }
+/* จอแคบมาก (≤ 359px) */
+@media (max-width: 359px) {
+    .sk-top .sk-call { padding: 0 6px; gap: 5px; }
+    .sk-call .sk-call-txt small { font-size: 9.5px; }
+    .sk-fab-report svg { display: none; }
+    .sk-fab-report { padding: 0 12px; }
+}
+
+/* ---------- แผนที่เต็มหน้าจอ (ปุ่ม "เต็มจอ" มุมขวาบน) ---------- */
+.sk-map-full .sk-top, .sk-map-full .sk-panel, .sk-map-full .sk-fab, .sk-map-full .sk-legend { display: none !important; }
+.sk-map-full .sk-fullmap .leaflet-top.leaflet-right { top: calc(10px + env(safe-area-inset-top)) !important; right: 6px; }
+.sk-map-full .sk-map .leaflet-control-zoom { display: block; }
+.sk-map .sk-fullbtn[aria-pressed="true"] { background: var(--sk-primary); color: #fff; border-color: var(--sk-primary); }
+.sk-map .sk-fullbtn[aria-pressed="true"]:hover { background: #256cb0; }
+/* คอมพิวเตอร์: ปุ่มกลมไอคอนเดียว (เหมือน "ดูทั้งหมด") · โหมดเต็มจอแสดงข้อความ "ออกจากเต็มจอ" ให้เห็นชัด */
+.sk-map .sk-fullbtn[aria-pressed="true"] { width: auto; padding: 0 14px 0 12px; border-radius: 999px; }
+.sk-map .sk-fullbtn[aria-pressed="true"] span { display: inline; }

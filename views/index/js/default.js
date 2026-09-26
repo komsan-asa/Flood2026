@@ -77,6 +77,10 @@ $(function () {
     // ปุ่มซูมอยู่ใต้กล่องคำอธิบายสี — จำนวนระดับเปลี่ยนได้ (ผู้ดูแลเพิ่มเองที่หน้า "ระดับพื้นที่")
     // จึงวางตามความสูงจริงของกล่อง แทนการตั้งระยะตายตัว
     function placeZoom() {
+        if (document.body.classList.contains('sk-map-full')) {
+            $('#pubMap .leaflet-top.leaflet-right').css('top', '');   // เต็มจอ: ปุ่มชิดมุมบน (CSS)
+            return;
+        }
         var lg = document.getElementById('pubLegend');
         var $corner = $('#pubMap .leaflet-top.leaflet-right');
         if (lg && lg.getClientRects().length) {
@@ -85,14 +89,17 @@ $(function () {
             // มือถือซ่อนกล่องนี้ (และปุ่มซูม) — ปุ่ม "ดูทั้งหมด" อยู่ใต้แถบบน
             // แถบบนสูงไม่เท่ากัน (จอแคบชื่อจังหวัดขึ้นบรรทัดใหม่) จึงวัดจากขอบล่างจริงของแถบ
             var top = document.querySelector('.sk-top');
-            $corner.css('top', top ? Math.round(top.getBoundingClientRect().bottom - 4) + 'px' : '');
+            $corner.css('top', top ? Math.round(top.getBoundingClientRect().bottom + 2) + 'px' : '');
         }
     }
 
     /** พื้นที่ที่มองเห็นไม่โดนแผงข้อมูลบัง — ใช้ตอนซูมไปหาพื้นที่ */
     function fitPadding() {
         if (isMobile()) {
-            return { paddingTopLeft: [20, 90], paddingBottomRight: [20, $panel.outerHeight() + 20] };
+            // เว้นใต้แถบบน (สูงไม่เท่ากันตามจอ) + ปุ่ม "ดูทั้งหมด" และเหนือแถวปุ่มลอย + แผ่นเลื่อน
+            var topEl = document.querySelector('.sk-top');
+            var topB = topEl ? topEl.getBoundingClientRect().bottom : 120;
+            return { paddingTopLeft: [20, Math.round(topB + 60)], paddingBottomRight: [20, $panel.outerHeight() + 76] };
         }
         return { paddingTopLeft: [$panel.outerWidth() + 40, 110], paddingBottomRight: [40, 40] };
     }
@@ -154,7 +161,69 @@ $(function () {
     });
     new FitAllControl().addTo(map);
 
+    /* ---------- แผนที่เต็มหน้าจอ: ซ่อนแถบบน แผงข้อมูล และปุ่มลอย เหลือแต่แผนที่ ---------- */
+    var IC_FULL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>';
+    var IC_EXIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/></svg>';
+    var fullBtn = null;
+    function setMapFull(on) {
+        on = !!on;
+        if (document.body.classList.contains('sk-map-full') === on) {
+            return;
+        }
+        document.body.classList.toggle('sk-map-full', on);
+        if (fullBtn) {
+            fullBtn.innerHTML = (on ? IC_EXIT : IC_FULL) + '<span>' + (on ? 'ออกจากเต็มจอ' : 'เต็มจอ') + '</span>';
+            fullBtn.setAttribute('aria-pressed', String(on));
+            fullBtn.title = on ? 'ออกจากโหมดแผนที่เต็มจอ' : 'แสดงแผนที่เต็มหน้าจอ';
+        }
+        // ใช้โหมดเต็มจอของเบราว์เซอร์ด้วย (ซ่อนแถบที่อยู่เว็บ) ถ้าเครื่องรองรับ — iPhone ไม่รองรับ ใช้แค่ซ่อนแผง
+        try {
+            var el = document.documentElement;
+            if (on && !document.fullscreenElement && el.requestFullscreen) {
+                el.requestFullscreen().catch(function () { /* ไม่อนุญาต — ไม่เป็นไร */ });
+            } else if (!on && document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(function () {});
+            }
+        } catch (e) { /* เบราว์เซอร์เก่า */ }
+        placeZoom();
+        setTimeout(function () { map.invalidateSize(); }, 60);
+    }
+    var FullControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function () {
+            var b = fullBtn = L.DomUtil.create('button', 'sk-fitall sk-fullbtn sk-glass');
+            b.type = 'button';
+            b.setAttribute('aria-pressed', 'false');
+            b.title = 'แสดงแผนที่เต็มหน้าจอ';
+            b.innerHTML = IC_FULL + '<span>เต็มจอ</span>';
+            L.DomEvent.disableClickPropagation(b);
+            L.DomEvent.on(b, 'click', function (e) {
+                L.DomEvent.preventDefault(e);
+                setMapFull(!document.body.classList.contains('sk-map-full'));
+            });
+            return b;
+        }
+    });
+    new FullControl().addTo(map);
+    // ออกจากเต็มจอของเบราว์เซอร์ (ปุ่มย้อนกลับ/Esc) → คืนหน้าปกติด้วย
+    document.addEventListener('fullscreenchange', function () {
+        if (!document.fullscreenElement && document.body.classList.contains('sk-map-full')) {
+            setMapFull(false);
+        }
+    });
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape' && document.body.classList.contains('sk-map-full')) {
+            setMapFull(false);
+        }
+    });
+
     placeZoom();
+    // แถบบนเปลี่ยนความสูงได้เอง (โหลดฟอนต์เสร็จ / ชื่อภาค-จังหวัดเปลี่ยนตามตัวกรอง) — ขยับปุ่ม "ดูทั้งหมด" ตาม
+    if (window.ResizeObserver && document.querySelector('.sk-top')) {
+        new ResizeObserver(function () { placeZoom(); }).observe(document.querySelector('.sk-top'));
+    }
     // สลับหน้าจอมือถือ ↔ คอมพิวเตอร์ (หมุนจอ/ย่อหน้าต่าง) — แผงข้อมูลย้ายที่ จัดแผนที่ใหม่ให้เห็นทุกพื้นที่
     var wasMobile = isMobile();
     $(window).on('resize', function () {

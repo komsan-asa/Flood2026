@@ -28,7 +28,7 @@ $ddpm = flood_ddpm_phone();
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16c2 0 2-1.5 4-1.5S8 16 10 16s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M2 20.5c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/><path d="M12 2.5s-4 4.5-4 7a4 4 0 0 0 8 0c0-2.5-4-7-4-7z"/></svg>
         </div>
         <p class="ab-kicker">แนะนำระบบ</p>
-        <h1>ระบบ <span>SK Flood</span> by SCPH</h1>
+        <h1>ระบบ <span>Thailand Flood</span> by SCPH</h1>
         <p class="ab-tag">แจ้งเร็ว · ประกาศชัด · ช่วยทัน</p>
         <p class="ab-lead">ระบบแจ้งจุดน้ำท่วมและประสานการช่วยเหลือผู้ประสบภัย <?= h(flood_region_name()) ?><?= $n('provinces') > 1 ? ' ' . $n('provinces') . ' จังหวัด' : '' ?>
             ประชาชนแจ้งได้จากมือถือทันที เจ้าหน้าที่ตรวจสอบแล้วประกาศขึ้นแผนที่ พร้อมมอบหมายทีมลงพื้นที่
@@ -346,7 +346,7 @@ $ddpm = flood_ddpm_phone();
     }
 
     function save(canvas) {
-        var name = 'SK-Flood-A4.png';
+        var name = 'Thailand-Flood-A4.png';
         var go = function (href, revoke) {
             var a = document.createElement('a');
             a.download = name;

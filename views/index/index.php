@@ -131,6 +131,7 @@ $icons = array(
             แผนที่นี้แสดงเฉพาะขอบเขตพื้นที่ที่เจ้าหน้าที่ประกาศ ไม่มีข้อมูลส่วนบุคคลของผู้ใด
             <span class="sk-privacy-links">· <a href="<?= URL ?>sos/status">ติดตามคำขอความช่วยเหลือ</a> · <a href="<?= URL ?>login">เจ้าหน้าที่</a> · <a href="<?= URL ?>index/situation">สถานการณ์ทั่วประเทศ</a> · <a href="<?= URL ?>index/about">เกี่ยวกับระบบ</a></span>
         </p>
+        <p class="sk-credit">พัฒนาโดยกลุ่มงานสารสนเทศ โรงพยาบาลสมเด็จพระยุพราชสระแก้ว<br>การใช้โลโก้ได้รับอนุญาตจากสำนักงานป้องกันและบรรเทาสาธารณภัยจังหวัดสระแก้ว</p>
         <p class="sk-dev-credit">Developed by Komsan Asa</p>
     </div>
 </aside>
@@ -139,11 +140,11 @@ $icons = array(
 
 <div class="sk-fab" id="pubFab">
     <?php if (!empty($this->publicNotices)) { ?>
-    <button type="button" class="sk-btn sk-news-fab" id="pubNewsBtn">📢 ข้อมูลที่ควรรู้ <b><?= count($this->publicNotices) ?></b></button>
+    <button type="button" class="sk-btn sk-news-fab" id="pubNewsBtn" aria-label="ข้อมูลที่ควรรู้ <?= count($this->publicNotices) ?> รายการ"><span aria-hidden="true">📢</span><span class="sk-fab-txt"> ข้อมูลที่ควรรู้</span> <b><?= count($this->publicNotices) ?></b></button>
     <?php } ?>
     <a href="<?= URL ?>report" class="sk-btn sk-btn-primary sk-fab-report">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><path d="M12 7v5M9.5 9.5h5"/></svg>
-        แจ้งจุดน้ำท่วม
+        <span>แจ้งจุดน้ำท่วม</span>
     </a>
     <div class="sk-sos-row">
         <span class="sk-sos-label sk-glass">ขอความช่วยเหลือ</span>
