@@ -36,6 +36,28 @@ class Api extends Controller {
         ));
     }
 
+    /**
+     * จังหวัด/อำเภอของพิกัด (ตำบลใกล้สุดในรัศมี 30 กม.) — หน้าแผนที่ประชาชนใช้ตั้งตัวกรองเริ่มต้นตามตำแหน่งผู้ใช้
+     * ไม่บันทึกพิกัด · ปัดเศษ 3 ตำแหน่ง (~100 ม.) ก่อนค้น
+     */
+    function area() {
+        $lat = round((float) flood_in('lat', '', $_GET), 3);
+        $lng = round((float) flood_in('lng', '', $_GET), 3);
+        $g = flood_valid_latlng($lat, $lng) ? $this->model->guessArea($lat, $lng, 30) : null;
+        if (!$g) {
+            flood_json(array('chk' => false, 'msg' => 'อยู่นอกพื้นที่ในระบบ'));
+        }
+        $pv = flood_province_of($g['amphoe_code']);
+        $name = '';
+        foreach ($this->model->getProvinces() as $p) {
+            if ($p['province_code'] === $pv) {
+                $name = $p['name'];
+            }
+        }
+        flood_json(array('chk' => $name !== '', 'province' => $pv, 'province_name' => $name,
+            'amphoe' => $g['amphoe_code'], 'amphoe_name' => $g['amphoe_name']));
+    }
+
     /** รายชื่อตำบลของอำเภอ (ข้อมูลอ้างอิงสาธารณะ) — ฟอร์มเลือกตำบลโหลดทีละอำเภอ */
     function tambons() {
         $amphoe = flood_in('amphoe', '', $_GET);

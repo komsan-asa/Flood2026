@@ -1152,9 +1152,68 @@ $(function () {
         amphoeName = a ? a[1] : '';
         applyArea(silent);
     }
-    $fRegion.on('change', function () { setRegion(String($(this).val() || '')); });
-    $fProvince.on('change', function () { setProvince(String($(this).val() || '')); });
-    $fAmphoe.on('change', function () { setAmphoe(String($(this).val() || '')); });
+    /* จำพื้นที่ที่เลือกไว้ในเครื่อง — เปิดครั้งหน้าเริ่มที่เดิม (ไม่มี localStorage = ข้ามไป) */
+    var SAVE_KEY = 'skfArea';
+    var userPicked = false;
+    function saveArea() {
+        userPicked = true;
+        try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify({ r: regionFilter, p: provinceFilter, a: amphoeFilter, t: Date.now() }));
+        } catch (e) { /* โหมดส่วนตัว */ }
+    }
+    function loadArea() {
+        try {
+            return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+        } catch (e) {
+            return null;
+        }
+    }
+    /**
+     * จังหวัดตามตำแหน่งผู้ใช้ (เบราว์เซอร์ถามสิทธิ์ก่อน) → ตั้งตัวกรองจังหวัดให้เอง
+     * manual = กดปุ่ม "ใกล้ฉัน" (แจ้งผลทุกกรณี) · อัตโนมัติ = ครั้งแรกที่เปิด ไม่แจ้งถ้าไม่ได้
+     */
+    function locateArea(manual) {
+        if (!navigator.geolocation) {
+            if (manual) {
+                Flood.toast('เบราว์เซอร์นี้หาตำแหน่งไม่ได้', 'info');
+            }
+            return;
+        }
+        var $b = $('#pubFNear').prop('disabled', true);
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            Flood.get('api/area', { lat: pos.coords.latitude.toFixed(3), lng: pos.coords.longitude.toFixed(3) }, { silent: true })
+                .then(function (o) {
+                    $b.prop('disabled', false);
+                    if (!o || !o.chk) {
+                        if (manual) {
+                            Flood.toast('ตำแหน่งของคุณอยู่นอกพื้นที่ในระบบ', 'info');
+                        }
+                        return;
+                    }
+                    if (!manual && userPicked) {
+                        return;   // ผู้ใช้เลือกพื้นที่เองไปแล้วระหว่างรอ — ไม่เปลี่ยนให้
+                    }
+                    setProvince(o.province);
+                    saveArea();
+                    Flood.toast('แสดงพื้นที่ จ.' + o.province_name + ' ตามตำแหน่งของคุณ · เปลี่ยนได้ที่ตัวกรอง', 'info');
+                }, function () {
+                    $b.prop('disabled', false);
+                    if (manual) {
+                        Flood.toast('ตำแหน่งของคุณอยู่นอกพื้นที่ในระบบ หรือหาไม่ได้ — เลือกจังหวัดจากตัวกรองแทนได้', 'info');
+                    }
+                });
+        }, function () {
+            $b.prop('disabled', false);
+            if (manual) {
+                Flood.toast('ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง — เลือกจังหวัดจากตัวกรองแทนได้', 'info');
+            }
+        }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 });
+    }
+
+    $fRegion.on('change', function () { setRegion(String($(this).val() || '')); saveArea(); });
+    $fProvince.on('change', function () { setProvince(String($(this).val() || '')); saveArea(); });
+    $fAmphoe.on('change', function () { setAmphoe(String($(this).val() || '')); saveArea(); });
+    $('#pubFNear').on('click', function () { locateArea(true); });
     $('#pubFLevel').on('change', function () {
         levelFilter = String($(this).val() || '');
         firstFit = true;
@@ -1177,6 +1236,7 @@ $(function () {
         textFilter = '';
         $('#pubFText').val('');
         setRegion('');
+        saveArea();
     });
 
     $('#pubHandle').on('click', function () {
@@ -1191,7 +1251,23 @@ $(function () {
     } else if (data.region) {
         setRegion(data.region);       // ?region=east
     } else {
-        applyArea(true);
+        // ไม่ได้ระบุในลิงก์: ใช้พื้นที่ที่เลือกไว้ครั้งก่อน → ไม่เคยเลือก = หาจังหวัดจากตำแหน่งผู้ใช้
+        var saved = loadArea();
+        if (saved && saved.a) {
+            setAmphoe(saved.a);
+        } else if (saved && saved.p) {
+            setProvince(saved.p);
+        } else if (saved && saved.r) {
+            setRegion(saved.r);
+        } else {
+            applyArea(true);
+        }
+        if (!saved && (data.provinces || []).length > 1) {
+            try {
+                localStorage.setItem(SAVE_KEY, JSON.stringify({ r: '', p: '', a: '', t: Date.now() }));   // ถามตำแหน่งครั้งเดียว
+            } catch (e) { /* ไม่มี localStorage — ถามทุกครั้งที่เปิด */ }
+            locateArea(false);
+        }
     }
 
     // ลิงก์ตรงถึงพื้นที่ (#zone-12) — ส่งต่อในไลน์แล้วเปิดมาที่รายละเอียดเลย

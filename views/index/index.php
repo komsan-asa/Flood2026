@@ -61,7 +61,10 @@ $icons = array(
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
                 <input type="search" id="pubFText" placeholder="ค้นหาชื่อพื้นที่ / ข้อความ / ตำบล" aria-label="ค้นหาพื้นที่" autocomplete="off" />
             </div>
-            <button type="button" class="sk-freset" id="pubFReset" hidden>ล้างตัวกรอง ✕</button>
+            <div class="sk-fbtns">
+                <button type="button" class="sk-fnear" id="pubFNear" title="ตั้งตัวกรองเป็นจังหวัดที่คุณอยู่">📍 ใกล้ฉัน</button>
+                <button type="button" class="sk-freset" id="pubFReset" hidden>ล้างตัวกรอง ✕</button>
+            </div>
         </form>
         <p class="sk-eyebrow" id="pubOverview">ภาพรวมทั้งจังหวัด · แตะเพื่อกรอง</p>
         <div class="sk-bento" id="pubKpis">
