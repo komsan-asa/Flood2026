@@ -298,6 +298,12 @@ $(function () {
             + '<i class="fa fa-facebook-square" aria-hidden="true"></i> ' + esc(text) + '</a>';
     }
 
+    /** เครดิตเว็บต้นทาง (ข้อมูลที่นำเข้าจากเว็บอื่น) */
+    function webLink(w) {
+        return w && w.url ? '<a class="sk-fb-link sk-web-link" href="' + esc(w.url) + '" target="_blank" rel="noopener noreferrer nofollow">'
+            + '<i class="fa fa-globe" aria-hidden="true"></i> ข้อมูลจาก ' + esc(w.name || 'เว็บต้นทาง') + '</a>' : '';
+    }
+
     function pointPopup(p) {
         if (p.pending) {
             return '<div class="sk-pt-pop"><b>จุดน้ำท่วมที่ประชาชนแจ้ง</b>'
@@ -311,13 +317,14 @@ $(function () {
                 + (p.approx ? ' · ตำแหน่งโดยประมาณ' : '') + '</div>'
                 + (p.fb_url ? '<a class="sk-fb-link" href="' + esc(p.fb_url) + '" target="_blank" rel="noopener noreferrer nofollow">'
                     + '<i class="fa fa-facebook-square" aria-hidden="true"></i> ดูโพสต์ต้นทางบน Facebook</a>' : '')
+                + webLink(p.web)
                 + '</div>';
         }
         var lv = FloodMap.level(p.level);
         // เปิดรายละเอียดพื้นที่นี้อยู่แล้ว ไม่ต้องมีปุ่มซ้ำ
         var act = (detailId === +p.zone_id ? '' : '<button type="button" class="sk-pp-zone" data-zone="' + esc(p.zone_id) + '">'
                 + 'ดูรายละเอียดพื้นที่' + IC.go + '</button>')
-            + (p.fb_url ? fbLink(p.fb_url, 'ดูโพสต์ต้นทางบน Facebook') : '');
+            + (p.fb_url ? fbLink(p.fb_url, 'ดูโพสต์ต้นทางบน Facebook') : '') + webLink(p.web);
         return '<div class="sk-pt-pop"><b>จุดน้ำท่วมที่ประชาชนแจ้ง</b>'
             + '<div class="row"><span class="lv-badge lv-' + esc(p.level) + '" style="background:' + esc(lv.color) + '">' + esc(lv.name) + '</span></div>'
             + (p.depth ? '<div class="row">💧 น้ำ' + esc(p.depth) + (p.extent ? ' · ' + esc(p.extent) : '') + '</div>' : '')
@@ -603,6 +610,7 @@ $(function () {
             + (markersById[p.id] ? '<button type="button" class="sk-rp-pin" data-pt="' + esc(p.id) + '">' + IC.pin + 'ดูจุดบนแผนที่</button>' : '')
             + (p.approx ? '<span class="sk-rp-approx">ตำแหน่งโดยประมาณ</span>' : '')
             + (p.fb_url ? fbLink(p.fb_url, 'โพสต์ต้นทาง') : '')
+            + webLink(p.web)
             + '</div></li>';
     }
 
@@ -736,7 +744,8 @@ $(function () {
             + '</div>';
 
         if (z.note) {
-            h += section(z.source === 'web' ? 'ข้อมูลจากข่าว/โซเชียล (ยังไม่ตรวจสอบ)' : 'ประกาศจากเจ้าหน้าที่', '',
+            h += section(z.source === 'web' ? 'ข้อมูลจากข่าว/โซเชียล (ยังไม่ตรวจสอบ)'
+                : (z.source === 'hdms' ? 'ข้อมูลจากกรมทางหลวง (อัปเดตอัตโนมัติ)' : 'ประกาศจากเจ้าหน้าที่'), '',
                 '<div class="sk-dt-note">' + FloodMap.linkNote(z.note) + '</div>');
         }
 

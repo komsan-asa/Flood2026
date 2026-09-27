@@ -858,6 +858,31 @@ class Flood extends Controller {
 
     /* ==================== รายงานจากประชาชน ==================== */
 
+    /** ซิงก์จุดน้ำท่วมบนทางหลวงจากกรมทางหลวง (HDMS) ทันที — ปกติระบบซิงก์เองทุก 10 นาที */
+    function hdmsSync() {
+        $this->requireOfficer(true);
+        require_once 'models/hdms_model.php';
+        $raw = flood_in('items', '', $_POST);
+        $items = $raw !== '' ? json_decode($raw, true) : null;
+        if ($raw !== '' && !is_array($items)) {
+            flood_json(array('chk' => false, 'msg' => 'ข้อมูลที่ส่งมาไม่ถูกต้อง'));
+        }
+        $last = Hdms_Model::lastSync();
+        if (flood_in('auto', '', $_POST) === '1' && !empty($last['at']) && time() - (int) $last['at'] < Hdms_Model::SYNC_EVERY - 30) {
+            flood_json(array('chk' => true, 'skipped' => true, 'last' => (int) $last['at'], 'every' => Hdms_Model::SYNC_EVERY));
+        }
+        try {
+            $m = new Hdms_Model();
+            $c = $m->sync($this->model, (int) $this->user()['user_id'], $items === null ? null : Hdms_Model::cleanItems($items));
+        } catch (Exception $e) {
+            error_log('[flood] hdmsSync: ' . $e->getMessage());
+            flood_json(array('chk' => false, 'msg' => $e->getMessage()));
+        }
+        flood_json(array('chk' => true, 'counts' => $c, 'last' => time(), 'every' => Hdms_Model::SYNC_EVERY,
+            'msg' => 'ซิงก์กรมทางหลวงแล้ว: ต้นทาง ' . $c['fetched'] . ' จุด · ใหม่ ' . $c['created'] . ' · อัปเดต ' . $c['updated']
+                . ' · ปิดประกาศ ' . $c['closed']));
+    }
+
     function reports() {
         $this->requireMenu('reports');
         $status = flood_in('status', 'pending', $_GET);

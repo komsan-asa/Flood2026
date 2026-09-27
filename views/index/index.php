@@ -131,6 +131,7 @@ $icons = array(
             แผนที่นี้แสดงเฉพาะขอบเขตพื้นที่ที่เจ้าหน้าที่ประกาศ ไม่มีข้อมูลส่วนบุคคลของผู้ใด
             <span class="sk-privacy-links">· <a href="<?= URL ?>sos/status">ติดตามคำขอความช่วยเหลือ</a> · <a href="<?= URL ?>login">เจ้าหน้าที่</a> · <a href="<?= URL ?>index/situation">สถานการณ์ทั่วประเทศ</a> · <a href="<?= URL ?>index/about">เกี่ยวกับระบบ</a></span>
         </p>
+        <p class="sk-credit">ข้อมูลน้ำท่วมบนทางหลวง: <a href="https://hdms.doh.go.th/dashboard" target="_blank" rel="noopener">ศูนย์บริหารงานอุบัติภัย กรมทางหลวง</a> (อัปเดตอัตโนมัติทุก 10 นาที)</p>
         <p class="sk-credit">พัฒนาโดยกลุ่มงานสารสนเทศ โรงพยาบาลสมเด็จพระยุพราชสระแก้ว<br>การใช้โลโก้ได้รับอนุญาตจากสำนักงานป้องกันและบรรเทาสาธารณภัยจังหวัดสระแก้ว</p>
         <p class="sk-dev-credit">Developed by Komsan Asa</p>
     </div>

@@ -382,6 +382,7 @@ function flood_zone_sources() {
         'report' => 'จากรายงานประชาชน',
         'arankub' => 'นำเข้าจาก arankub.com',
         'web' => 'ข่าว/โซเชียล (รอตรวจสอบ)',
+        'hdms' => 'กรมทางหลวง (HDMS)',
     );
 }
 
@@ -1306,4 +1307,60 @@ function flood_amphoe_options($amphoes, $selected = '', $prefix = '') {
         $html .= count($groups) > 1 ? '<optgroup label="จ.' . h($g['name']) . '" data-pv="' . h($pv) . '">' . $opts . '</optgroup>' : $opts;
     }
     return $html;
+}
+
+/* ============================================================
+ * ลิงก์ในข้อความ — เช่น ลิงก์โพสต์ Facebook ที่ติดมากับคำขอ/รายงานที่นำเข้าจากโซเชียล
+ * ============================================================ */
+
+/**
+ * หาลิงก์ http(s) ในข้อความธรรมดา · ตัดเครื่องหมายท้ายประโยค (. , ; : ! ?) ออก · อักษรไทยที่ติดท้ายไม่นับเป็นลิงก์
+ * คืน array ของ array(ตำแหน่งเริ่มเป็น byte, ความยาวเป็น byte, url)
+ */
+function flood_find_urls($text) {
+    $text = (string) $text;
+    $found = array();
+    if ($text !== '' && preg_match_all('/https?:\/\/[A-Za-z0-9\-._~:\/?#@!$&*+,;=%]+/', $text, $m, PREG_OFFSET_CAPTURE)) {
+        foreach ($m[0] as $hit) {
+            $url = rtrim($hit[0], '.,;:!?');
+            if (strlen($url) > 10) {
+                $found[] = array($hit[1], strlen($url), $url);
+            }
+        }
+    }
+    return $found;
+}
+
+/** ข้อความธรรมดา → HTML: ลิงก์ http(s) กดเปิดแท็บใหม่ได้ ส่วนอื่น escape ด้วย h() ทั้งหมด */
+function flood_linkify($text) {
+    $text = (string) $text;
+    $out = '';
+    $pos = 0;
+    foreach (flood_find_urls($text) as $u) {
+        $out .= h(substr($text, $pos, $u[0] - $pos))
+            . '<a href="' . h($u[2]) . '" target="_blank" rel="noopener noreferrer">' . h($u[2]) . '</a>';
+        $pos = $u[0] + $u[1];
+    }
+    return $out . h(substr($text, $pos));
+}
+
+/** ลิงก์ Facebook ลิงก์แรกในข้อความ (โพสต์ต้นทางของข้อมูลนำเข้า) — ไม่มีคืน '' */
+function flood_facebook_url($text) {
+    foreach (flood_find_urls($text) as $u) {
+        if (preg_match('~^https?://([a-z0-9-]+\.)*(facebook\.com|fb\.com|fb\.watch)(/|$)~i', $u[2])) {
+            return $u[2];
+        }
+    }
+    return '';
+}
+
+/**
+ * เว็บภายนอกที่ระบบนำข้อมูลเข้ามาและให้เครดิตต่อประชาชน (host => ชื่อที่แสดง)
+ * รายงานที่ source_url เป็นเว็บในรายการนี้ แผนที่ประชาชนแสดงลิงก์ "ข้อมูลจาก ..." — เว็บอื่นไม่แสดงลิงก์
+ */
+function flood_credited_web_sources() {
+    return array(
+        'sakaeo-flood.onrender.com' => 'Sa Kaeo Flood Watch & SOS',
+        'hdms.doh.go.th' => 'ศูนย์บริหารงานอุบัติภัย กรมทางหลวง',
+    );
 }
