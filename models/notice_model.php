@@ -186,7 +186,7 @@ class Notice_Model extends Model {
      * ไม่ส่งข้อมูลผู้บันทึก/ผู้แก้ไข
      * เรียงข่าวล่าสุดไว้บนสุดเสมอ (ที่ปักหมุดไม่ถูกยกขึ้นก่อน — หน้าประชาชนแสดงป้าย "ปักหมุด" แทน)
      */
-    public function listPublic($limit = 30) {
+    public function listPublic($limit = 80) {   // ช่วงน้ำท่วมหนักมีข้อมูลวันละหลายสิบเรื่อง — หน้าแสดง 3 เรื่องแรก ที่เหลืออยู่ใต้ "ดูทั้งหมด"
         $rows = $this->db->select(
             "SELECT n.notice_id, n.category, n.title, n.detail, n.place, n.contact, n.source_name, n.source_url,
                     n.is_pinned, n.verify, COALESCE(n.info_at, n.created_at) AS info_at, a.name AS amphoe_name

@@ -149,7 +149,7 @@ class Report extends Controller {
                 CURLOPT_TIMEOUT => 8,
                 CURLOPT_CONNECTTIMEOUT => 5,
                 CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (SK Flood map link reader)',
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (Thailand Flood map link reader)',
             ));
             $head = curl_exec($ch);
             $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);

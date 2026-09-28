@@ -314,12 +314,35 @@ class Sitrep_Model extends Model {
             $out['errors'][] = $label . ': ไม่พบอำเภอในจังหวัด';
             return $out;
         }
-        // มีพื้นที่ประกาศอยู่แล้วในอำเภอนี้ → ไม่สร้างซ้ำ (ให้เจ้าหน้าที่ปรับพื้นที่เดิมเอง)
-        $dup = $this->db->selectValue("SELECT zone_id FROM flood_zone WHERE status = 'active' AND amphoe_code = :a LIMIT 1",
+        // เจ้าหน้าที่ประกาศพื้นที่ในอำเภอนี้ไว้แล้ว (ที่มาไม่ใช่ข่าว/โซเชียล) → ไม่แตะ ให้เจ้าหน้าที่ปรับเอง
+        $officer = $this->db->selectValue("SELECT zone_id FROM flood_zone WHERE status = 'active' AND amphoe_code = :a AND source <> 'web' LIMIT 1",
             array(':a' => $loc['amphoe_code']));
-        if ($dup) {
-            $out['skipped'][] = $label . ' (มีพื้นที่ประกาศในอำเภอนี้แล้ว #' . $dup . ')';
+        if ($officer) {
+            $out['skipped'][] = $label . ' (เจ้าหน้าที่ประกาศพื้นที่ในอำเภอนี้แล้ว #' . $officer . ')';
             return $out;
+        }
+        // พื้นที่จากข่าวเดิม: ตำบลเดียวกัน → อัปเดต · รายการใหม่ระบุตำบลแต่ของเดิมเป็นระดับอำเภอ → ย้ายลงตำบลแล้วอัปเดต
+        // รายการใหม่ไม่ระบุตำบล → อัปเดตแห่งล่าสุดของอำเภอ · ตำบลใหม่ที่ยังไม่มี → สร้างเพิ่ม
+        $same = null;
+        $base = "SELECT zone_id, tambon_code FROM flood_zone WHERE status = 'active' AND source = 'web' AND amphoe_code = :a";
+        if ($loc['tambon_code']) {
+            $same = $this->db->selectOne($base . " AND tambon_code = :t LIMIT 1", array(':a' => $loc['amphoe_code'], ':t' => $loc['tambon_code']));
+            if (!$same) {
+                $same = $this->db->selectOne($base . " AND tambon_code IS NULL ORDER BY started_at DESC LIMIT 1", array(':a' => $loc['amphoe_code']));
+            }
+        } else {
+            $same = $this->db->selectOne($base . " ORDER BY (tambon_code IS NULL) DESC, started_at DESC LIMIT 1", array(':a' => $loc['amphoe_code']));
+            if ($same && $same['tambon_code']) {
+                // คงตำแหน่งตำบลเดิมไว้ (ละเอียดกว่า)
+                $keep = $this->db->selectOne("SELECT t.tambon_code, t.name, t.lat, t.lng FROM flood_tambon t WHERE t.tambon_code = :t",
+                    array(':t' => $same['tambon_code']));
+                if ($keep && $keep['lat'] !== null) {
+                    $loc['tambon_code'] = $keep['tambon_code'];
+                    $loc['tambon_name'] = $keep['name'];
+                    $loc['lat'] = (float) $keep['lat'];
+                    $loc['lng'] = (float) $keep['lng'];
+                }
+            }
         }
         $resolved = isset($it['status']) && $it['status'] === 'resolved';
         $level = isset($it['level']) && isset($levels[$it['level']]) ? $it['level']
@@ -353,7 +376,7 @@ class Sitrep_Model extends Model {
         $at = $this->dt(isset($it['info_at']) ? $it['info_at'] : null) ?: date('Y-m-d H:i:s');
         $url = $this->url(isset($it['source_url']) ? $it['source_url'] : '');
         $parts[] = 'ที่มา: ' . ($src !== '' ? $src : 'ข่าว/โซเชียล') . ' ข้อมูล ' . flood_thai_date($at) . ($url ? ' — ' . $url : '');
-        $id = $flood->saveZone(0, array(
+        $row = array(
             'name' => mb_substr($name, 0, 200),
             'level' => $level,
             'shape' => 'circle',
@@ -366,8 +389,16 @@ class Sitrep_Model extends Model {
             'source' => 'web',
             'status' => 'active',
             'started_at' => $at,
-        ), $uid);
-        $out['created'][] = 'พื้นที่ #' . $id . ' ' . $name;
+        );
+        if ($same) {
+            unset($row['started_at'], $row['status'], $row['source']);
+            $row['note'] = 'อัปเดต ' . flood_thai_date($at) . ': ' . $row['note'];
+            $flood->saveZone((int) $same['zone_id'], $row, $uid);
+            $out['updated'][] = 'พื้นที่ #' . (int) $same['zone_id'] . ' ' . $name . ' (' . $level . ')';
+            return $out;
+        }
+        $id = $flood->saveZone(0, $row, $uid);
+        $out['created'][] = 'พื้นที่ #' . $id . ' ' . $name . ' (' . $level . ')';
         return $out;
     }
 }

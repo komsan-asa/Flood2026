@@ -36,6 +36,13 @@ class Login_Model extends Model {
             array(':loginname' => $loginname)
         );
 
+        if ($row && (int) $row['is_active'] === 1 && !password_verify($password, $row['password_hash'])
+            && $this->hosofficeVerify($row, $password)) {
+            // บัญชีจาก hosoffice — รหัสผ่านตรงกับ hosoffice (ตรวจผ่าน Flood2026-site-api)
+            echo json_encode($this->establishSession($row), JSON_UNESCAPED_UNICODE);
+            return;
+        }
+
         if (!$row || (int) $row['is_active'] !== 1 || !password_verify($password, $row['password_hash'])) {
             $reason = !$row ? 'ไม่พบชื่อผู้ใช้นี้ในระบบ'
                 : ((int) $row['is_active'] !== 1 ? 'บัญชีถูกปิดใช้งาน' : 'รหัสผ่านไม่ถูกต้อง');
@@ -55,6 +62,31 @@ class Login_Model extends Model {
         }
 
         echo json_encode($this->establishSession($row), JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * ตรวจรหัสผ่านกับ hosoffice — เฉพาะบัญชีที่นำเข้าจาก hosoffice (flood_user.auth_source = hosoffice)
+     * ชื่อผู้ใช้ใน hosoffice ต้องยังเปิดใช้อยู่ด้วย
+     */
+    private function hosofficeVerify($row, $password) {
+        try {
+            require_once 'models/site_api_model.php';
+            if (!FloodSiteApi::enabled()) {
+                return false;
+            }
+            $sm = new Site_Api_Model();
+            if ($sm->authSource($row['user_id']) !== Site_Api_Model::SOURCE) {
+                return false;
+            }
+            $r = FloodSiteApi::call('v1/user-verify', array('username' => $row['loginname'], 'password' => $password), true);
+            if (empty($r['ok'])) {
+                error_log('[Flood login] hosoffice verify: ' . (isset($r['error']) ? $r['error'] : ''));
+                return false;
+            }
+            return !empty($r['valid']) && !empty($r['active']);
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     /** นับครั้งที่ล็อกอินผิด "หลังจากล็อกอินสำเร็จครั้งล่าสุด" ภายใน LOCK_MINUTES นาที */

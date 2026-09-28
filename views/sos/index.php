@@ -6,7 +6,13 @@ $flags = flood_help_flags();
     <div class="pub-form-wrap">
         <div class="pub-form-head">
             <h1>🆘 ขอความช่วยเหลือ</h1>
-            <p>ช่วงน้ำท่วม — ส่งตรงถึงศูนย์ประสานของโรงพยาบาล เจ้าหน้าที่จะโทรกลับยืนยันทุกเรื่อง</p>
+            <div class="pub-test-warn" role="alert">
+                <span class="ptw-ic" aria-hidden="true">⚠️</span>
+                <div class="ptw-txt">
+                    <b>คำเตือน</b>
+                    <span>ในช่วงสถานการณ์น้ำท่วมและระบบอยู่ในระหว่างทดสอบ <u>ผู้ดูแลระบบจะเป็นผู้ติดต่อประสานงานกับ ปภ. สระแก้วอย่างเร่งด่วน</u></span>
+                </div>
+            </div>
         </div>
 
         <div class="pub-banner pub-banner-red">

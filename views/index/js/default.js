@@ -14,6 +14,14 @@ $(function () {
     map.createPane('skPoints');
     map.getPane('skPoints').style.zIndex = 450;
     var pointGroup = L.featureGroup().addTo(map);
+    // ขอบเขตอำเภอที่เลือก — ลงสีพื้นหลังจาง ๆ ใต้พื้นที่ประกาศ (public/geo/amphoe/<รหัส>.json · ดู public/geo/README.md)
+    map.createPane('skArea');
+    map.getPane('skArea').style.zIndex = 350;
+    map.getPane('skArea').style.pointerEvents = 'none';
+    var areaLayer = null;
+    var areaCode = '';
+    var areaCache = {};
+    var areaFitPending = false;
     var layersById = {};
     var markersById = {};
     var levelFilter = '';
@@ -104,8 +112,49 @@ $(function () {
         return { paddingTopLeft: [$panel.outerWidth() + 40, 110], paddingBottomRight: [40, 40] };
     }
 
+    /** ลงสีอำเภอที่เลือก (ไม่มีไฟล์ขอบเขต / โหลดไม่ได้ = ไม่ลงสี) */
+    function showAreaShape() {
+        var code = /^\d{4}$/.test(amphoeFilter) ? amphoeFilter : '';
+        if (code === areaCode) {
+            return;
+        }
+        areaCode = code;
+        if (areaLayer) {
+            map.removeLayer(areaLayer);
+            areaLayer = null;
+        }
+        if (!code) {
+            return;
+        }
+        areaFitPending = true;
+        var draw = function (gj) {
+            if (areaCode !== code || !gj) {
+                return;
+            }
+            areaLayer = L.geoJSON(gj, {
+                pane: 'skArea',
+                interactive: false,
+                attribution: 'ขอบเขตอำเภอ: <a href="https://github.com/chingchai/OpenGISData-Thailand" target="_blank" rel="noopener">OpenGISData-Thailand</a>',
+                style: { color: '#2563eb', weight: 2, opacity: 0.85, dashArray: '6 5', fillColor: '#3b82f6', fillOpacity: 0.1 }
+            }).addTo(map);
+            // ซูมให้เห็นทั้งอำเภอ (ยกเว้นกำลังเปิดรายละเอียดพื้นที่อยู่)
+            if (areaFitPending && detailId === null) {
+                map.fitBounds(areaLayer.getBounds(), $.extend({ maxZoom: 14 }, fitPadding()));
+            }
+            areaFitPending = false;
+        };
+        if (Object.prototype.hasOwnProperty.call(areaCache, code)) {
+            draw(areaCache[code]);
+            return;
+        }
+        fetch(Flood.url('public/geo/amphoe/' + code + '.json'))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (gj) { areaCache[code] = gj; draw(gj); })
+            .catch(function () { areaCache[code] = null; });
+    }
+
     function fitAll() {
-        var layers = layerGroup.getLayers().concat(pointGroup.getLayers());
+        var layers = layerGroup.getLayers().concat(pointGroup.getLayers(), areaLayer ? [areaLayer] : []);
         var pad = fitPadding();
         if (layers.length) {
             map.fitBounds(L.featureGroup(layers).getBounds(), $.extend({ maxZoom: 14 }, pad));
@@ -1186,12 +1235,14 @@ $(function () {
         fillAmphoes();
         $('#pubRegion').text(amphoeName ? 'อ.' + amphoeName + (provinceName ? ' จ.' + provinceName : '')
             : (provinceName ? 'จ.' + provinceName : (regionLabel || areaName)));
+        showAreaShape();
         syncUrl();
+        renderAll();
         if (!silent) {
+            // ซูมหลังได้ข้อมูลของพื้นที่ใหม่แล้ว (ไม่ซูมตามข้อมูลเดิมที่ยังค้างอยู่ก่อนโหลดเสร็จ)
             firstFit = true;
             reload();
         }
-        renderAll();
     }
     function setRegion(code, silent) {
         var r = code ? regionInfo(code) : null;

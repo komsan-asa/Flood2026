@@ -36,22 +36,28 @@ $actionNames = array(
                     <dt>กลุ่มเปราะบาง</dt><dd><?= flood_tags(flood_codes_names($h['vulnerable_flags'], $flags), 'tag-warn') ?></dd>
                     <?php } ?>
                     <?php if ($h['people_count']) { ?><dt>จำนวนคน</dt><dd><?= (int) $h['people_count'] ?> คน</dd><?php } ?>
-                    <?php if ($h['detail']) { ?><dt>รายละเอียด</dt><dd style="white-space:pre-line"><?= h($h['detail']) ?></dd><?php } ?>
+                    <?php if ($h['detail']) { ?><dt>รายละเอียด</dt><dd style="white-space:pre-line;overflow-wrap:anywhere"><?= flood_linkify($h['detail']) ?></dd><?php } ?>
                     <dt>ผู้ขอ</dt>
-                    <dd><?= h($h['requester_name']) ?><br>
-                        <a href="tel:<?= h($h['requester_phone']) ?>" class="phone-big"><i class="fa fa-phone"></i> <?= h(flood_format_phone($h['requester_phone'])) ?></a></dd>
+                    <dd><?= h($h['requester_name']) ?>
+                        <?php if ((string) $h['requester_phone'] !== '') { ?><br>
+                        <a href="tel:<?= h($h['requester_phone']) ?>" class="phone-big"><i class="fa fa-phone"></i> <?= h(flood_format_phone($h['requester_phone'])) ?></a>
+                        <?php } ?></dd>
                     <dt>พื้นที่</dt>
                     <dd><?= $h['tambon_name'] ? 'ต.' . h($h['tambon_name']) . ' ' : '' ?><?= $h['amphoe_name'] ? 'อ.' . h($h['amphoe_name']) : '<span class="text-muted">ไม่ระบุ</span>' ?>
                         <?php if ($h['address']) { ?><div><?= h($h['address']) ?></div><?php } ?></dd>
                     <dt>ช่องทาง</dt>
-                    <dd><?= $h['source'] === 'phone' ? 'เจ้าหน้าที่รับทางโทรศัพท์' . ($h['created_by_name'] ? ' (' . h($h['created_by_name']) . ')' : '') : ($h['source'] === 'facebook' ? 'นำเข้าจากโพสต์ Facebook — ลิงก์อยู่ในรายละเอียด' : 'ประชาชนส่งทางเว็บ') ?></dd>
+                    <?php $fbUrl = $h['source'] === 'facebook' ? flood_facebook_url($h['detail']) : ''; ?>
+                    <dd><?php if ($h['source'] === 'phone') { ?>เจ้าหน้าที่รับทางโทรศัพท์<?= $h['created_by_name'] ? ' (' . h($h['created_by_name']) . ')' : '' ?>
+                        <?php } elseif ($h['source'] === 'facebook') { ?>นำเข้าจากโพสต์ Facebook
+                        <?php if ($fbUrl) { ?><a href="<?= h($fbUrl) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-xs" style="margin-left:6px"><i class="fa fa-facebook-square"></i> เปิดโพสต์ต้นทาง</a><?php } ?>
+                        <?php } else { ?>ประชาชนส่งทางเว็บ<?php } ?></dd>
                     <dt>รับเรื่อง</dt><dd><?= h(flood_thai_date($h['created_at'])) ?> <span class="small-muted">(<?= h(flood_ago($h['created_at'])) ?>)</span></dd>
                     <?php if ($h['verified_at']) { ?><dt>ยืนยันโดย</dt><dd><?= h((string) $h['verified_by_name']) ?> · <?= h(flood_thai_date($h['verified_at'])) ?></dd><?php } ?>
                     <?php if ($h['team_name']) { ?>
                     <dt>ทีม</dt><dd><b><?= h($h['team_name']) ?></b><?php if ($h['team_phone']) { ?> · <a href="tel:<?= h($h['team_phone']) ?>"><?= h(flood_format_phone($h['team_phone'])) ?></a><?php } ?>
                         <?php if ($h['assigned_at']) { ?><span class="small-muted"> · มอบหมาย <?= h(flood_thai_date($h['assigned_at'])) ?></span><?php } ?></dd>
                     <?php } ?>
-                    <?php if ($h['result_note']) { ?><dt>ผล / เหตุผล</dt><dd><?= h($h['result_note']) ?></dd><?php } ?>
+                    <?php if ($h['result_note']) { ?><dt>ผล / เหตุผล</dt><dd style="overflow-wrap:anywhere"><?= flood_linkify($h['result_note']) ?></dd><?php } ?>
                 </dl>
             </div>
         </div>
@@ -197,7 +203,7 @@ $actionNames = array(
                         <div class="t-head"><?= h(isset($actionNames[$l['action']]) ? $actionNames[$l['action']] : $l['action']) ?>
                             <?php if ($l['action'] === 'assign' && $l['team_name']) { ?> → <?= h($l['team_name']) ?><?php } ?></div>
                         <div class="t-meta"><?= h(flood_thai_date($l['created_at'])) ?> · <?= h($l['user_name'] !== '' ? $l['user_name'] : 'ระบบ/ประชาชน') ?></div>
-                        <?php if ($l['note']) { ?><div class="t-note"><?= h($l['note']) ?></div><?php } ?>
+                        <?php if ($l['note']) { ?><div class="t-note" style="overflow-wrap:anywhere"><?= flood_linkify($l['note']) ?></div><?php } ?>
                     </li>
                     <?php } ?>
                 </ul>

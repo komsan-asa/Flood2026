@@ -1,0 +1,167 @@
+/* ห้องสถานการณ์ SAT — หน้า sat */
+.sat-hosp-name { font-size: 15px; font-weight: 500; color: #4d5663; margin-left: 6px; }
+.sat-muted { color: #8a93a0; }
+.sat-sub { font-size: 12.5px; color: #5b6573; line-height: 1.45; }
+.sat-note { color: #92400e; }
+.sat-nowrap { white-space: nowrap; }
+.sat-h { font-size: 17px; font-weight: 700; margin: 18px 0 10px; color: #18212d; }
+.sat-h small { font-size: 12.5px; font-weight: 400; color: #6b7482; margin-left: 6px; }
+.sat-h4 { font-size: 15px; font-weight: 700; margin: 16px 0 8px; }
+
+/* สีสถานะ */
+.sat-c-green { background: #dcfce7; color: #166534; border-color: #86efac; }
+.sat-c-yellow { background: #fef9c3; color: #854d0e; border-color: #facc15; }
+.sat-c-orange { background: #ffedd5; color: #9a3412; border-color: #fb923c; }
+.sat-c-red { background: #fee2e2; color: #991b1b; border-color: #f87171; }
+.sat-c-none { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.sat-c-due { background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; }
+.sat-chip {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    font-size: 12.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; border: 1px solid transparent;
+}
+.sat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.sat-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; border: 1px solid rgba(0, 0, 0, .15); flex: 0 0 auto; }
+.sat-dot.sat-c-green { background: #16a34a; }
+.sat-dot.sat-c-yellow { background: #eab308; }
+.sat-dot.sat-c-orange { background: #ea580c; }
+.sat-dot.sat-c-red { background: #dc2626; }
+.sat-b-green { border-left-color: #16a34a !important; }
+.sat-b-yellow { border-left-color: #eab308 !important; }
+.sat-b-orange { border-left-color: #ea580c !important; }
+.sat-b-red { border-left-color: #dc2626 !important; }
+.sat-b-none { border-left-color: #cbd5e1 !important; }
+.sat-badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #dc2626; color: #fff; font-size: 11px; font-weight: 700; text-align: center; }
+.sat-stale { color: #b91c1c; font-size: 12px; }
+.sat-warn { background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12; border-radius: 10px; padding: 8px 12px; margin: 8px 0; font-size: 13.5px; }
+
+/* สถานะรวม */
+.sat-overall {
+    display: flex; flex-wrap: wrap; gap: 16px; background: #fff; border: 1px solid #dfe6ee; border-left: 10px solid #cbd5e1;
+    border-radius: 14px; padding: 14px 18px; margin-bottom: 12px;
+}
+.sat-overall-main { flex: 1 1 360px; min-width: 0; }
+.sat-overall-side { flex: 1 1 320px; min-width: 0; border-left: 1px dashed #dfe6ee; padding-left: 16px; }
+.sat-overall-label { font-size: 13px; color: #6b7482; font-weight: 600; }
+.sat-overall-value { font-size: 30px; font-weight: 800; line-height: 1.25; color: #18212d; }
+.sat-overall-value span { font-size: 18px; font-weight: 600; color: #374151; }
+.sat-overall-meta { font-size: 13px; color: #6b7482; margin-top: 2px; }
+.sat-overall-reason { margin-top: 6px; font-size: 14px; }
+.sat-overall-act { margin-top: 8px; font-size: 14px; font-weight: 600; color: #1e3a5f; }
+.sat-sug { font-weight: 600; margin-bottom: 6px; }
+.sat-reasons { list-style: none; margin: 0 0 8px; padding: 0; font-size: 13.5px; }
+.sat-reasons li { display: flex; align-items: baseline; padding: 2px 0; }
+@media (max-width: 767px) {
+    .sat-overall-side { border-left: 0; padding-left: 0; border-top: 1px dashed #dfe6ee; padding-top: 10px; }
+    .sat-overall-value { font-size: 24px; }
+}
+
+/* เมนู 5 เรื่อง */
+.sat-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.sat-steps a {
+    display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; background: #fff;
+    border: 1px solid #dfe6ee; color: #18212d; font-weight: 600; font-size: 14px; text-decoration: none;
+}
+.sat-steps a:hover, .sat-steps a:focus { border-color: #2f7fc9; color: #155e9c; text-decoration: none; }
+.sat-steps b { color: #155e9c; }
+
+/* การ์ดตัวชี้วัด */
+.sat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.sat-card {
+    background: #fff; border: 1px solid #dfe6ee; border-left: 6px solid #cbd5e1; border-radius: 12px; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.sat-card.js-sat-item { cursor: pointer; }
+.sat-card.js-sat-item:hover, .sat-card.js-sat-item:focus { box-shadow: 0 0 0 2px rgba(47, 127, 201, .25); outline: none; }
+.sat-card.is-stale { background: repeating-linear-gradient(135deg, #fff, #fff 10px, #f8fafc 10px, #f8fafc 20px); border-color: #94a3b8; }
+.sat-card-h { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.sat-card-t { font-weight: 700; color: #18212d; }
+.sat-card-t .fa { color: #2f7fc9; width: 16px; text-align: center; }
+.sat-card-hint { font-size: 12px; color: #6b7482; }
+.sat-card-note { font-size: 13.5px; color: #1f2937; }
+.sat-card-auto { font-size: 12.5px; color: #1e40af; }
+.sat-card-auto .fa { font-size: 11px; opacity: .7; }
+.sat-card-f { margin-top: auto; font-size: 12px; color: #6b7482; padding-top: 4px; }
+.sat-card-util { grid-column: span 2; }
+@media (max-width: 560px) { .sat-card-util { grid-column: auto; } }
+.sat-util { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-top: 1px dashed #e5e7eb; }
+.sat-util.js-sat-item { cursor: pointer; }
+.sat-util.js-sat-item:hover, .sat-util.js-sat-item:focus { background: #f8fafc; outline: none; }
+.sat-util > span:first-child { flex: 0 0 120px; font-weight: 600; }
+.sat-util .sat-util-note { flex: 1 1 auto; min-width: 0; font-size: 12.5px; color: #5b6573; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sat-util.is-stale > span:first-child::after { content: " •"; color: #b91c1c; }
+
+/* ส่วนต่าง ๆ */
+.sat-sec { margin-top: 14px; scroll-margin-top: 70px; }
+.sat-sec-h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sat-sec-h h3 { font-size: 17px; font-weight: 700; margin: 0; }
+.sat-sec-h h3 b { color: #155e9c; }
+.sat-sec-h h3 small { font-size: 12.5px; font-weight: 400; color: #6b7482; margin-left: 4px; }
+.sat-table { margin-bottom: 0; font-size: 13.5px; }
+.sat-table > tbody > tr > td { vertical-align: top; }
+.sat-row-due > td { background: #f8fbff; }
+.sat-row-red > td { background: #fff5f5; }
+.sat-row-none > td { color: #8a93a0; }
+.sat-row-total > td { font-weight: 700; border-top: 2px solid #dfe6ee !important; }
+.sat-issues { max-width: 360px; }
+.sat-tel { font-size: 12.5px; }
+.sat-rtype { font-size: 12px; font-weight: 700; color: #155e9c; }
+.sat-rt-refer { color: #9a3412; }
+.sat-backup { font-size: 11px; font-weight: 700; color: #6b7482; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 5px; margin-left: 4px; }
+.sat-hit { display: flex; align-items: baseline; font-size: 12.5px; margin-top: 3px; }
+.sat-details { margin-top: 10px; }
+.sat-details summary { cursor: pointer; font-weight: 600; color: #155e9c; }
+.sat-staff td:not(:first-child), .sat-staff th:not(:first-child) { text-align: center; width: 52px; }
+.sat-two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 991px) { .sat-two { grid-template-columns: minmax(0, 1fr); } }
+.sat-two h4 { font-size: 15px; font-weight: 700; margin: 0 0 8px; }
+.sat-two h4 small { font-weight: 400; color: #6b7482; font-size: 12.5px; }
+.sat-mp { margin-top: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 10px; font-size: 13.5px; }
+.sat-links { margin-top: 10px; font-size: 13.5px; }
+.sat-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.sat-kpis > div { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; text-align: center; }
+.sat-kpis b { display: block; font-size: 22px; line-height: 1.2; }
+.sat-kpis span { font-size: 12px; color: #5b6573; }
+.sat-kpis .is-warn { background: #fff7ed; border-color: #fed7aa; }
+.sat-kpis .is-bad { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+@media (max-width: 480px) { .sat-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* แผนที่ */
+.sat-map { height: 460px; border-radius: 12px; border: 1px solid #dfe6ee; z-index: 0; }
+.sat-map.is-picking { cursor: crosshair; box-shadow: 0 0 0 3px rgba(234, 88, 12, .45); }
+@media (max-width: 640px) { .sat-map { height: 360px; } }
+.sat-hosp-icon span {
+    display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px;
+    background: #155e9c; color: #fff; font-size: 20px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .45);
+}
+.sat-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; font-size: 12.5px; color: #4d5663; }
+.sat-legend i { display: inline-block; vertical-align: middle; margin-right: 3px; }
+.sat-lg-hosp { width: 14px; height: 14px; border-radius: 4px; background: #155e9c; }
+.sat-lg-fac { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #0f172a; }
+.sat-lg-fac.sat-c-green { background: #16a34a; }
+.sat-lg-fac.sat-c-yellow { background: #eab308; }
+.sat-lg-fac.sat-c-orange { background: #ea580c; }
+.sat-lg-fac.sat-c-red { background: #dc2626; }
+.sat-lg-zone { width: 16px; height: 12px; border-radius: 6px; background: rgba(190, 24, 93, .25); border: 2px solid #be185d; }
+
+/* ฟอร์ม / หน้าต่าง */
+.sat-form label, .modal label { display: block; font-weight: 600; font-size: 13.5px; margin-bottom: 8px; }
+.sat-form label small, .modal label small { font-weight: 400; color: #6b7482; }
+.sat-form-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.sat-form-row > label { flex: 1 1 180px; min-width: 0; }
+.sat-form-act { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.sat-body { font-family: inherit; font-size: 14px; line-height: 1.5; }
+.sat-check { display: flex !important; align-items: center; gap: 6px; font-weight: 500 !important; }
+.sat-check input { margin: 0; }
+.sat-hint { font-size: 12.5px; color: #5b6573; margin: 4px 0 10px; }
+.sat-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.sat-pick-b {
+    flex: 1 1 110px; border: 2px solid transparent; border-radius: 10px; padding: 8px 6px; font-weight: 800; font-size: 14px;
+    cursor: pointer; text-align: center; opacity: .72;
+}
+.sat-pick-b small { display: block; font-size: 11.5px; font-weight: 500; }
+.sat-pick-b:hover, .sat-pick-b:focus { opacity: 1; }
+.sat-pick-b.is-on { opacity: 1; box-shadow: 0 0 0 3px rgba(15, 23, 42, .55); }
+.sat-reps { list-style: none; padding: 0; margin: 0; }
+.sat-reps li { padding: 3px 0; border-bottom: 1px dashed #eef2f6; }
+.sat-reps .btn-link { padding: 0 4px 0 0; font-weight: 700; }
+.sat-pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 14px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin: 0; }

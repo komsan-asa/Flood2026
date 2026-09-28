@@ -137,7 +137,7 @@ class Zone_Import_Model extends Model {
                 CURLOPT_TIMEOUT => 20,
                 CURLOPT_CONNECTTIMEOUT => 8,
                 CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; SK-Flood-Import/1.0)',
+                CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; Thailand-Flood-Import/1.0)',
                 CURLOPT_HTTPHEADER => array('Accept: application/json'),
                 CURLOPT_ENCODING => '',
             ));

@@ -146,7 +146,8 @@ class Flood extends Controller {
             'helpView' => 'ใบงาน', 'vulnerable' => 'ทะเบียนกลุ่มเปราะบาง', 'vulnerableForm' => 'แก้ไขทะเบียนกลุ่มเปราะบาง',
             'teams' => 'ทีมช่วยเหลือ', 'settingsUsers' => 'ผู้ใช้งาน', 'onlineUsers' => 'ผู้ใช้งานออนไลน์',
             'loginLog' => 'ประวัติการเข้าใช้งาน', 'auditLog' => 'ประวัติการแก้ไขข้อมูล', 'profile' => 'ข้อมูลผู้ใช้',
-            'zoneLevels' => 'ระดับพื้นที่', 'notices' => 'ข้อมูลที่ควรรู้', 'zoneImport' => 'นำเข้าพื้นที่จาก arankub',
+            'zoneLevels' => 'ระดับพื้นที่', 'notices' => 'ข้อมูลที่ควรรู้', 'zoneImport' => 'นำเข้าพื้นที่จาก arankub', 'staff' => 'บุคลากรที่ได้รับผลกระทบ',
+            'manpower' => 'อัตรากำลังรายเวร', 'manpowerUnits' => 'กรอบอัตรากำลัง',
         );
         $a = $this->currentAction();
         return isset($map[$a]) ? $map[$a] : null;
@@ -1179,6 +1180,261 @@ class Flood extends Controller {
             : (isset($msgs[$value]) ? $msgs[$value] : 'บันทึกแล้ว')));
     }
 
+    /* ==================== บุคลากรโรงพยาบาลที่ได้รับผลกระทบ (ข้อมูลภายใน) ==================== */
+
+    private function staffModel() {
+        require_once 'models/staff_model.php';
+        return new Staff_Model();
+    }
+
+    private function staffFilters() {
+        $f = array(
+            'q' => trim(mb_substr((string) flood_in('q', '', $_GET), 0, 100)),
+            'level' => flood_in('level', '', $_GET),
+            'flag' => flood_in('flag', '', $_GET),
+            'follow' => flood_in('follow', '', $_GET),
+            'dept' => trim(mb_substr((string) flood_in('dept', '', $_GET), 0, 150)),
+            'source' => (int) flood_in('source', 0, $_GET),
+        );
+        if ($f['level'] !== 'affected' && !array_key_exists($f['level'], flood_staff_levels())) {
+            $f['level'] = '';
+        }
+        if (!array_key_exists($f['flag'], flood_staff_flags())) {
+            $f['flag'] = '';
+        }
+        if (!array_key_exists($f['follow'], flood_staff_follow_options())) {
+            $f['follow'] = '';
+        }
+        return $f;
+    }
+
+    /** รายชื่อบุคลากรที่ตอบแบบสำรวจ (รวม 3 ฟอร์ม) — เฉพาะเจ้าหน้าที่ศูนย์/ผู้ดูแลระบบ */
+    function staff() {
+        $this->requireMenu('staff');
+        $sm = $this->staffModel();
+        $ready = $sm->ensureTables();
+        $f = $this->staffFilters();
+        $this->view->js[] = 'flood/js/staff.js';
+        $this->view->staffReady = $ready;
+        $this->view->staffFilters = $f;
+        $this->view->staffResult = $ready ? $sm->listStaff($f, $this->pageParam()) : array('rows' => array(), 'total' => 0, 'page' => 1, 'pages' => 1);
+        $this->view->staffSummary = $ready ? $sm->summary() : array();
+        $this->view->staffDepts = $ready ? $sm->departments() : array();
+        $this->view->staffSources = $ready ? $sm->sources() : array();
+        $this->view->staffIsAdmin = $this->isAdmin();
+        $this->view->autoRefresh = false;   // กำลังนำเข้าหลายฟอร์ม — ไม่ให้หน้ารีเฟรชตัดกลางทาง
+        $this->view->activeTab = 'staff';
+        $this->view->pageTitle = 'บุคลากรที่ได้รับผลกระทบ';
+        $this->view->rander('flood/staff');
+    }
+
+    function staffData($id = null) {
+        $this->requireMenu('staff', true);
+        $sm = $this->staffModel();
+        $s = $sm->ensureTables() ? $sm->getStaff((int) $id) : null;
+        if (!$s) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่พบข้อมูลนี้'));
+        }
+        $resps = array();
+        foreach ($sm->responses($s['staff_id']) as $r) {
+            $resps[] = array(
+                'source' => (string) $r['source_name'],
+                'at' => $r['answered_at'] ? flood_thai_date($r['answered_at']) : '',
+                'answers' => json_decode((string) $r['answers'], true) ?: array(),
+            );
+        }
+        $levels = flood_staff_levels();
+        $flags = flood_staff_flags();
+        $fl = array();
+        foreach (array_filter(explode(',', (string) $s['flags'])) as $k) {
+            if (isset($flags[$k])) {
+                $fl[] = $flags[$k]['name'];
+            }
+        }
+        flood_json(array('chk' => true, 'staff' => array(
+            'staff_id' => (int) $s['staff_id'],
+            'name' => trim($s['prefix'] . ' ' . $s['full_name']),
+            'phone' => (string) $s['phone'], 'phone2' => (string) $s['phone2'],
+            'position' => (string) $s['position'], 'department' => (string) $s['department'],
+            'level' => $s['level'], 'level_name' => isset($levels[$s['level']]) ? $levels[$s['level']]['name'] : $s['level'],
+            'flags' => $fl,
+            'follow_status' => $s['follow_status'], 'follow_note' => (string) $s['follow_note'],
+            'followed' => $s['followed_at'] ? flood_thai_date($s['followed_at']) . ($s['followed_by_name'] ? ' · ' . $s['followed_by_name'] : '') : '',
+            'responses' => $resps,
+        )));
+    }
+
+    function staffFollow() {
+        $this->requireMenu('staff', true);
+        $sm = $this->staffModel();
+        $id = (int) flood_in('staff_id', 0, $_POST);
+        if (!$sm->ensureTables() || !$sm->getStaff($id)) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่พบข้อมูลนี้'));
+        }
+        $ok = $sm->setFollow($id, flood_in('follow_status', '', $_POST), trim((string) flood_in('follow_note', '', $_POST)),
+            (int) $this->user()['user_id']);
+        flood_json($ok ? array('chk' => true, 'msg' => 'บันทึกการติดตามแล้ว') : array('chk' => false, 'msg' => 'กรุณาเลือกสถานะ'));
+    }
+
+    /** ดึงคำตอบใหม่จาก Google Sheet — source_id = 0 คือทุกแหล่งที่เปิดใช้ */
+    function staffSync() {
+        $this->requireMenu('staff', true);
+        $sm = $this->staffModel();
+        if (!$sm->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตาราง flood_staff — ให้ผู้ดูแลรัน php sql/apply_schema.php 17'));
+        }
+        @set_time_limit(180);
+        $only = (int) flood_in('source_id', 0, $_POST);
+        $lines = array();
+        $new = 0;
+        $fail = 0;
+        Audit::suspend();   // นำเข้าหลายร้อยแถว — ไม่บันทึกประวัติทีละแถว
+        try {
+            foreach ($sm->sources(true) as $src) {
+                if ($only && (int) $src['source_id'] !== $only) {
+                    continue;
+                }
+                try {
+                    $res = $sm->importCsv((int) $src['source_id'], $sm->fetchCsv($src['sheet_url']));
+                    $new += $res['new'];
+                    $lines[] = $src['name'] . ': ใหม่ ' . $res['new'] . ' แถว (ในชีต ' . $res['rows'] . ')';
+                } catch (Exception $e) {
+                    $fail++;
+                    $sm->markSyncError((int) $src['source_id'], $e->getMessage());
+                    $lines[] = $src['name'] . ': ' . $e->getMessage();
+                }
+            }
+        } finally {
+            Audit::resume();
+        }
+        flood_json(array('chk' => $fail === 0 || $new > 0, 'msg' => ($fail ? 'ดึงข้อมูลไม่สำเร็จบางแหล่ง' : 'ดึงข้อมูลแล้ว · คำตอบใหม่ ' . $new . ' แถว'),
+            'lines' => $lines));
+    }
+
+    /** อัปโหลด CSV แทนการดึงจากลิงก์ (ชีตตั้งเป็น "จำกัด" แล้ว) */
+    function staffUpload() {
+        $this->requireMenu('staff', true);
+        $sm = $this->staffModel();
+        $src = $sm->ensureTables() ? $sm->getSource((int) flood_in('source_id', 0, $_POST)) : null;
+        if (!$src) {
+            flood_json(array('chk' => false, 'msg' => 'กรุณาเลือกแหล่งข้อมูล'));
+        }
+        if (empty($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES['csv']['tmp_name'])) {
+            flood_json(array('chk' => false, 'msg' => 'กรุณาเลือกไฟล์ .csv'));
+        }
+        if ($_FILES['csv']['size'] > Staff_Model::MAX_BYTES) {
+            flood_json(array('chk' => false, 'msg' => 'ไฟล์ใหญ่เกิน 8 MB'));
+        }
+        $raw = file_get_contents($_FILES['csv']['tmp_name']);
+        if (substr($raw, 0, 2) === 'PK') {
+            flood_json(array('chk' => false, 'msg' => 'ไฟล์นี้เป็น Excel (.xlsx) — ใน Google Sheet เลือก ไฟล์ → ดาวน์โหลด → ค่าที่คั่นด้วยจุลภาค (.csv)'));
+        }
+        @set_time_limit(180);
+        Audit::suspend();
+        try {
+            $res = $sm->importCsv((int) $src['source_id'], $raw);
+        } catch (Exception $e) {
+            Audit::resume();
+            flood_json(array('chk' => false, 'msg' => $e->getMessage()));
+        }
+        Audit::resume();
+        flood_json(array('chk' => true, 'msg' => $src['name'] . ': นำเข้าใหม่ ' . $res['new'] . ' แถว · ซ้ำ ' . $res['dup']
+            . ' · บุคคลใหม่ ' . $res['people_new']));
+    }
+
+    /** เพิ่ม/แก้/เปิด-ปิดแหล่งข้อมูล — เฉพาะผู้ดูแลระบบ */
+    function staffSource() {
+        $this->requireAdmin(true);
+        $sm = $this->staffModel();
+        if (!$sm->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตาราง flood_staff'));
+        }
+        $id = (int) flood_in('source_id', 0, $_POST);
+        $act = flood_in('act', 'save', $_POST);
+        if ($act === 'toggle') {
+            $src = $sm->getSource($id);
+            if (!$src) {
+                flood_json(array('chk' => false, 'msg' => 'ไม่พบแหล่งข้อมูล'));
+            }
+            $sm->setSourceActive($id, !(int) $src['is_active']);
+            flood_json(array('chk' => true, 'msg' => (int) $src['is_active'] ? 'ปิดการดึงข้อมูลแหล่งนี้แล้ว' : 'เปิดใช้แหล่งนี้แล้ว'));
+        }
+        $r = $sm->saveSource($id, flood_in('name', '', $_POST), flood_in('sheet_url', '', $_POST));
+        flood_json(is_string($r) ? array('chk' => false, 'msg' => $r) : array('chk' => true, 'msg' => 'บันทึกแหล่งข้อมูลแล้ว', 'source_id' => $r));
+    }
+
+    /** คำนวณระดับผลกระทบ/ป้ายใหม่ทุกคน (หลังปรับกติกาใน Staff_Model::classify) — ผู้ดูแลระบบ */
+    function staffRebuild() {
+        $this->requireAdmin(true);
+        $sm = $this->staffModel();
+        if (!$sm->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตาราง flood_staff'));
+        }
+        @set_time_limit(180);
+        Audit::suspend();
+        $n = $sm->rebuildAll();
+        Audit::resume();
+        flood_json(array('chk' => true, 'msg' => 'คำนวณใหม่แล้ว ' . $n . ' คน'));
+    }
+
+    /** รวมบุคคลซ้ำ (ชื่อ/เบอร์ต่างกันจนระบบจับคู่ไม่ได้) */
+    function staffMerge() {
+        $this->requireMenu('staff', true);
+        $sm = $this->staffModel();
+        $into = (int) flood_in('into_id', 0, $_POST);
+        $from = (int) flood_in('from_id', 0, $_POST);
+        if (!$sm->ensureTables() || !$sm->merge($into, $from)) {
+            flood_json(array('chk' => false, 'msg' => 'รวมไม่ได้ — ตรวจเลขรายการอีกครั้ง'));
+        }
+        flood_json(array('chk' => true, 'msg' => 'รวมข้อมูลเป็นคนเดียวแล้ว'));
+    }
+
+    /** ส่งออก CSV (เปิดด้วย Excel ได้) ตามตัวกรองที่เลือก */
+    function staffExport() {
+        $this->requireMenu('staff');
+        $sm = $this->staffModel();
+        if (!$sm->ensureTables()) {
+            exit('ยังไม่มีตาราง flood_staff');
+        }
+        $rows = $sm->listStaff($this->staffFilters(), 1, true);
+        $levels = flood_staff_levels();
+        $flags = flood_staff_flags();
+        $follow = flood_staff_follow_options();
+        $labels = Staff_Model::fieldLabels();
+        unset($labels['photos']);
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="staff-flood-' . date('Ymd-Hi') . '.csv"');
+        header('Cache-Control: no-store');
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+        fputcsv($out, array_merge(array('รหัส', 'ระดับผลกระทบ', 'ป้าย'), array_values($labels),
+            array('สถานะการติดตาม', 'บันทึกการติดตาม', 'จำนวนคำตอบ', 'ตอบล่าสุด')));
+        foreach ($rows as $r) {
+            $fl = array();
+            foreach (array_filter(explode(',', (string) $r['flags'])) as $k) {
+                $fl[] = isset($flags[$k]) ? $flags[$k]['name'] : $k;
+            }
+            $line = array($r['staff_id'], isset($levels[$r['level']]) ? $levels[$r['level']]['name'] : $r['level'], implode(', ', $fl));
+            foreach (array_keys($labels) as $k) {
+                $v = (string) $r[$k];
+                // กัน Excel ตีความเป็นสูตร / ตัดเลข 0 หน้าเบอร์โทร
+                if ($k === 'phone' || $k === 'phone2') {
+                    $v = $v !== '' ? "'" . $v : '';
+                } elseif ($v !== '' && strpos('=+-@', $v[0]) !== false) {
+                    $v = "'" . $v;
+                }
+                $line[] = $v;
+            }
+            $line[] = isset($follow[$r['follow_status']]) ? $follow[$r['follow_status']]['name'] : $r['follow_status'];
+            $line[] = (string) $r['follow_note'];
+            $line[] = (int) $r['resp_count'];
+            $line[] = (string) $r['last_at'];
+            fputcsv($out, $line);
+        }
+        fclose($out);
+        exit;
+    }
+
     /* ==================== คำขอความช่วยเหลือ / ใบงาน ==================== */
 
     function help() {
@@ -1661,6 +1917,9 @@ class Flood extends Controller {
             'status' => flood_in('status', '', $_GET),
         );
         $this->view->js[] = 'flood/js/users.js';
+        $this->view->js[] = 'flood/js/site_users.js';
+        require_once 'models/site_api_model.php';
+        $this->view->siteApi = array('on' => FloodSiteApi::enabled(), 'hint' => FloodSiteApi::setupHint(), 'mode' => FloodSiteApi::mode());
         $this->view->userFilters = $filters;
         $this->view->userRows = $this->model->listUsers($filters);
         $this->view->teams = $this->model->getTeams(true);
@@ -1669,6 +1928,37 @@ class Flood extends Controller {
         $this->view->activeTab = 'settingsUsers';
         $this->view->pageTitle = 'ผู้ใช้งาน';
         $this->view->rander('flood/settings_users');
+    }
+
+    /** ทดสอบการเชื่อมต่อ Flood2026-site-api — สถานะฐาน + โครงสร้างตาราง/ผลทดลอง SQL (ไม่มีข้อมูลรายบุคคล) */
+    function siteApiTest() {
+        $this->requireAdmin(true);
+        require_once 'models/site_api_model.php';
+        if (!FloodSiteApi::enabled()) {
+            flood_json(array('chk' => false, 'msg' => FloodSiteApi::setupHint()));
+        }
+        $h = FloodSiteApi::call('health');
+        $s = !empty($h['ok']) ? FloodSiteApi::call('v1/schema') : array();
+        flood_json(array('chk' => !empty($h['ok']), 'msg' => !empty($h['ok']) ? 'เชื่อมต่อ API ได้' : (isset($h['error']) ? $h['error'] : 'เชื่อมต่อไม่ได้'),
+            'health' => $h, 'schema' => $s));
+    }
+
+    /** นำเข้าผู้ใช้จาก hosoffice (HR_USERNAME = ชื่อผู้ใช้) — ไม่ลดสิทธิ์ผู้ใช้เดิม */
+    function siteApiImportUsers() {
+        $this->requireAdmin(true);
+        require_once 'models/site_api_model.php';
+        $sm = new Site_Api_Model();
+        if (!$sm->ensureColumns()) {
+            flood_json(array('chk' => false, 'msg' => 'เพิ่มคอลัมน์ auth_source ในตาราง flood_user ไม่ได้ — ให้ผู้ดูแลรัน php sql/apply_schema.php 19'));
+        }
+        $r = FloodSiteApi::call('v1/users');
+        if (empty($r['ok'])) {
+            flood_json(array('chk' => false, 'msg' => isset($r['error']) ? $r['error'] : 'ดึงรายชื่อไม่สำเร็จ'));
+        }
+        $n = $sm->importUsers(isset($r['rows']) ? (array) $r['rows'] : array());
+        flood_json(array('chk' => true, 'counts' => $n, 'msg' => 'นำเข้าจาก hosoffice แล้ว: มีชื่อผู้ใช้ ' . $n['total'] . ' คน · เพิ่มใหม่ ' . $n['created']
+            . ' · ปรับปรุง ' . $n['updated'] . ' · เชื่อมบัญชีเดิม ' . $n['linked'] . ' · ปิดบัญชี (ลาออก) ' . $n['disabled'] . ' · ข้าม ' . $n['skipped']
+            . ($n['admin_kept'] ? ' · บัญชีผู้ดูแลที่ชื่อซ้ำ (ไม่ผูก) ' . $n['admin_kept'] : '')));
     }
 
     function saveUser() {
@@ -1877,6 +2167,228 @@ class Flood extends Controller {
         header('X-Content-Type-Options: nosniff');
         readfile($file);
         exit;
+    }
+
+    /* ==================== อัตรากำลังพยาบาลรายเวร (เทียบกรอบ ช/บ/ด) ==================== */
+
+    private function mpModel() {
+        require_once 'models/manpower_model.php';
+        return new Manpower_Model();
+    }
+
+    private function mpDate($src) {
+        $d = (string) flood_in('date', '', $src);
+        require_once 'models/manpower_model.php';
+        return Manpower_Model::validDate($d) ? $d : date('Y-m-d');
+    }
+
+    /** หน้าตรวจสอบอัตรากำลังรายวัน/รายเวร */
+    function manpower() {
+        $this->requireMenu('manpower');
+        $mp = $this->mpModel();
+        $ready = $mp->ensureTables();
+        $date = $this->mpDate($_GET);
+        require_once 'models/site_api_model.php';
+        $apiOn = FloodSiteApi::enabled();
+        if ($ready && $apiOn && $mp->needSync($date)) {
+            try {
+                $mp->syncFromApi($date);
+            } catch (Throwable $e) {
+                // ดึงไม่ได้ก็ยังแสดงข้อมูลเดิม — สถานะอยู่ใน flood_mp_sync
+            }
+        }
+        $this->view->mpApi = array('on' => $apiOn, 'hint' => FloodSiteApi::setupHint(),
+            'last' => $ready ? $mp->lastSync($date) : null, 'every' => Manpower_Model::syncMinutes());
+        $group = trim(mb_substr((string) flood_in('group', '', $_GET), 0, 150));
+        $units = $ready ? $mp->units() : array();
+        $groups = array();
+        foreach ($units as $u) {
+            $groups[$u['group_name']] = true;
+        }
+        if ($group !== '' && isset($groups[$group])) {
+            $units = array_values(array_filter($units, function ($u) use ($group) { return $u['group_name'] === $group; }));
+        } else {
+            $group = '';
+        }
+        $day = $ready ? $mp->dayInfo($date) : array('holiday' => false, 'name' => '');
+        $matrix = $ready ? $mp->matrix($date, $units, $day['holiday']) : array();
+        $this->view->js[] = 'flood/js/manpower.js';
+        $this->view->css[] = 'flood/css/manpower.css';
+        $this->view->mpReady = $ready;
+        $this->view->mpDate = $date;
+        $this->view->mpGroup = $group;
+        $this->view->mpGroups = array_keys($groups);
+        $this->view->mpUnits = $units;
+        $this->view->mpDay = $day;
+        $this->view->mpMatrix = $matrix;
+        $this->view->mpSummary = Manpower_Model::summary($matrix);
+        // ภาพสรุปบุคลากรที่ได้รับผลกระทบ (ตัวเลขรวม) — ไม่มีตาราง/ผิดพลาด = ไม่แสดง
+        $this->view->mpStaff = null;
+        $this->view->mpStaffDepts = array();
+        try {
+            $sm = $this->staffModel();
+            if ($sm->ensureTables()) {
+                $this->view->mpStaff = $sm->summary();
+                $this->view->mpStaffDepts = $sm->departments();
+            }
+        } catch (Exception $e) {
+            error_log('[flood] manpower staff summary: ' . $e->getMessage());
+        }
+        $this->view->mpIsAdmin = $this->isAdmin();
+        $this->view->activeTab = 'manpower';
+        $this->view->pageTitle = 'อัตรากำลังรายเวร';
+        $this->view->rander('flood/manpower');
+    }
+
+    /** กรอกจำนวนพยาบาลที่ขึ้นเวรเอง (ว่าง = ลบค่าที่กรอก กลับไปใช้ข้อมูลลงเวลา) */
+    function manpowerSave() {
+        $this->requireMenu('manpower', true);
+        $mp = $this->mpModel();
+        if (!$mp->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตารางอัตรากำลัง'));
+        }
+        $unit = $mp->getUnit((int) flood_in('unit_id', 0, $_POST));
+        $date = (string) flood_in('date', '', $_POST);
+        $shift = strtoupper((string) flood_in('shift', '', $_POST));
+        if (!$unit || !Manpower_Model::validDate($date) || !isset(Manpower_Model::SHIFTS[$shift])) {
+            flood_json(array('chk' => false, 'msg' => 'ข้อมูลไม่ถูกต้อง'));
+        }
+        if ($date > date('Y-m-d', strtotime('+1 day'))) {
+            flood_json(array('chk' => false, 'msg' => 'บันทึกล่วงหน้าเกิน 1 วันไม่ได้'));
+        }
+        $raw = (string) flood_in('actual', '', $_POST);
+        $actual = null;
+        if ($raw !== '') {
+            if (!ctype_digit($raw) || (int) $raw > 99) {
+                flood_json(array('chk' => false, 'msg' => 'จำนวนต้องเป็นตัวเลข 0–99'));
+            }
+            $actual = (int) $raw;
+        }
+        $note = mb_substr((string) flood_in('note', '', $_POST), 0, 300);
+        $u = $this->user();
+        $mp->saveCount((int) $unit['unit_id'], $date, $shift, $actual, $note, isset($u['user_id']) ? $u['user_id'] : null);
+        flood_json(array('chk' => true, 'msg' => $actual === null
+            ? 'ลบจำนวนที่กรอกแล้ว — ใช้ข้อมูลจากการลงเวลา'
+            : 'บันทึก ' . $unit['unit_name'] . ' เวร' . Manpower_Model::SHIFTS[$shift]['name'] . ' ' . $actual . ' คน'));
+    }
+
+    /** ดึงข้อมูลลงเวลาจาก Flood2026-site-api (hosoffice) ของวันที่เลือกทันที */
+    function manpowerSync() {
+        $this->requireMenu('manpower', true);
+        $mp = $this->mpModel();
+        if (!$mp->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตารางอัตรากำลัง'));
+        }
+        $date = (string) flood_in('date', '', $_POST);
+        if (!Manpower_Model::validDate($date) || $date > date('Y-m-d') || $date < date('Y-m-d', strtotime('-30 days'))) {
+            flood_json(array('chk' => false, 'msg' => 'ดึงได้เฉพาะวันนี้ย้อนหลังไม่เกิน 30 วัน'));
+        }
+        $r = $mp->syncFromApi($date);
+        flood_json(array('chk' => !empty($r['ok']), 'msg' => $r['msg']));
+    }
+
+    /** รายชื่อผู้ลงเวลาในเวร */
+    function manpowerCheckins() {
+        $this->requireMenu('manpower', true);
+        $mp = $this->mpModel();
+        $unit = $mp->ensureTables() ? $mp->getUnit((int) flood_in('unit_id', 0, $_GET)) : null;
+        $date = (string) flood_in('date', '', $_GET);
+        $shift = strtoupper((string) flood_in('shift', '', $_GET));
+        if (!$unit || !Manpower_Model::validDate($date) || !isset(Manpower_Model::SHIFTS[$shift])) {
+            flood_json(array('chk' => false, 'msg' => 'ข้อมูลไม่ถูกต้อง'));
+        }
+        $rows = array();
+        foreach ($mp->checkins($unit['unit_code'], $date, $shift) as $r) {
+            $rows[] = array('code' => $r['emp_code'], 'name' => (string) $r['emp_name'], 'type' => $r['staff_type'],
+                'at' => $r['checkin_at'] ? date('H:i', strtotime($r['checkin_at'])) : '');
+        }
+        flood_json(array('chk' => true, 'rows' => $rows));
+    }
+
+    /** ตั้งค่ากรอบอัตรากำลัง + วันหยุด (ผู้ดูแลระบบ) */
+    function manpowerUnits() {
+        $this->requireAdmin();
+        $mp = $this->mpModel();
+        $ready = $mp->ensureTables();
+        $this->view->js[] = 'flood/js/manpower.js';
+        $this->view->css[] = 'flood/css/manpower.css';
+        $this->view->mpReady = $ready;
+        $this->view->mpUnits = $ready ? $mp->units(false) : array();
+        $this->view->mpHolidays = $ready ? $mp->holidays(date('Y-01-01')) : array();
+        $this->view->mpUnmapped = $ready ? $mp->recentUnmapped() : array();
+        $this->view->activeTab = 'manpower';
+        $this->view->pageTitle = 'กรอบอัตรากำลัง';
+        $this->view->rander('flood/manpower_units');
+    }
+
+    function manpowerUnitSave() {
+        $this->requireAdmin(true);
+        $mp = $this->mpModel();
+        if (!$mp->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตารางอัตรากำลัง'));
+        }
+        $id = (int) flood_in('unit_id', 0, $_POST);
+        if ($id > 0 && !$mp->getUnit($id)) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่พบหน่วยงาน'));
+        }
+        if (flood_in('act', '', $_POST) === 'toggle' && $id > 0) {
+            $unit = $mp->getUnit($id);
+            $u = $this->user();
+            $mp->saveUnit($id, array('is_active' => (int) $unit['is_active'] ? 0 : 1), isset($u['user_id']) ? $u['user_id'] : null);
+            flood_json(array('chk' => true, 'msg' => (int) $unit['is_active'] ? 'ปิดใช้หน่วยงานแล้ว' : 'เปิดใช้หน่วยงานแล้ว'));
+        }
+        $code = strtoupper(trim((string) flood_in('unit_code', '', $_POST)));
+        $name = mb_substr(trim((string) flood_in('unit_name', '', $_POST)), 0, 150);
+        $group = mb_substr(trim((string) flood_in('group_name', '', $_POST)), 0, 150);
+        if (!preg_match('/^[A-Z0-9_\-]{1,30}$/', $code)) {
+            flood_json(array('chk' => false, 'msg' => 'รหัสหน่วยงานใช้ A-Z 0-9 _ - ไม่เกิน 30 ตัว'));
+        }
+        if ($name === '' || $group === '') {
+            flood_json(array('chk' => false, 'msg' => 'กรอกชื่อหน่วยงานและกลุ่มงาน'));
+        }
+        if ($mp->codeTaken($code, $id)) {
+            flood_json(array('chk' => false, 'msg' => 'รหัส ' . $code . ' มีหน่วยงานอื่นใช้แล้ว'));
+        }
+        $data = array('unit_code' => $code, 'unit_name' => $name, 'group_name' => $group,
+            'std_ratio' => mb_substr(trim((string) flood_in('std_ratio', '', $_POST)), 0, 30) ?: null,
+            'note' => mb_substr(trim((string) flood_in('note', '', $_POST)), 0, 300) ?: null,
+            'hr_depts' => mb_substr(trim(preg_replace('/\s*,\s*/u', ', ', (string) flood_in('hr_depts', '', $_POST)), ', '), 0, 500) ?: null);
+        foreach (array('req_m', 'req_a', 'req_n', 'hol_m', 'hol_a', 'hol_n') as $k) {
+            $v = (string) flood_in($k, '', $_POST);
+            if ($v !== '' && (!ctype_digit($v) || (int) $v > 99)) {
+                flood_json(array('chk' => false, 'msg' => 'จำนวนต่อเวรต้องเป็นตัวเลข 0–99 หรือเว้นว่าง'));
+            }
+            $data[$k] = $v === '' ? null : (int) $v;
+        }
+        $sort = (string) flood_in('sort_order', '', $_POST);
+        if ($sort !== '' && ctype_digit($sort)) {
+            $data['sort_order'] = min(65000, (int) $sort);
+        }
+        $u = $this->user();
+        $mp->saveUnit($id, $data, isset($u['user_id']) ? $u['user_id'] : null);
+        flood_json(array('chk' => true, 'msg' => 'บันทึกกรอบ ' . $name . ' แล้ว'));
+    }
+
+    function manpowerHoliday() {
+        $this->requireAdmin(true);
+        $mp = $this->mpModel();
+        if (!$mp->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตารางอัตรากำลัง'));
+        }
+        $date = (string) flood_in('hdate', '', $_POST);
+        if (!Manpower_Model::validDate($date)) {
+            flood_json(array('chk' => false, 'msg' => 'วันที่ไม่ถูกต้อง'));
+        }
+        if (flood_in('act', '', $_POST) === 'delete') {
+            $mp->deleteHoliday($date);
+            flood_json(array('chk' => true, 'msg' => 'ลบวันหยุดแล้ว'));
+        }
+        $name = mb_substr(trim((string) flood_in('name', '', $_POST)), 0, 150);
+        if ($name === '') {
+            flood_json(array('chk' => false, 'msg' => 'กรอกชื่อวันหยุด'));
+        }
+        $mp->addHoliday($date, $name);
+        flood_json(array('chk' => true, 'msg' => 'บันทึกวันหยุดแล้ว'));
     }
 
 }

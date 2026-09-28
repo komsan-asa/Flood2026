@@ -58,6 +58,21 @@ if (!$isSuper) {
     </div>
 </div>
 
+<?php $sa = isset($this->siteApi) ? $this->siteApi : array('on' => false, 'hint' => ''); ?>
+<div class="flood-card" style="margin-bottom:16px">
+    <div class="flood-card-header"><i class="fa fa-exchange"></i> ผู้ใช้จาก hosoffice</div>
+    <div class="flood-card-body">
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button type="button" class="btn btn-success js-site-import"<?= $sa['on'] ? '' : ' disabled' ?>><i class="fa fa-download"></i> นำเข้าข้อมูลผู้ใช้จาก API</button>
+            <button type="button" class="btn btn-default js-site-test"<?= $sa['on'] ? '' : ' disabled' ?>><i class="fa fa-plug"></i> ทดสอบการเชื่อมต่อ</button>
+        </div>
+        <p class="small-muted" style="margin:8px 0 0">ดึงบุคลากรจาก Flood2026-site-api (ฐาน hosoffice) โดยใช้ HR_USERNAME เป็นชื่อผู้ใช้ และเข้าสู่ระบบด้วยรหัสผ่าน hosoffice
+            · ผู้ใช้ใหม่ได้สิทธิ์ "ผู้บริหาร/ดูอย่างเดียว" (viewer) ปรับสิทธิ์ภายหลังได้ · ผู้ใช้เดิมไม่ถูกเปลี่ยนสิทธิ์ และ admin / super_admin จะไม่ถูกลดสิทธิ์หรือปิดบัญชี</p>
+        <?php if (!$sa['on']) { ?><div class="alert alert-warning" style="margin:10px 0 0"><i class="fa fa-info-circle"></i> <?= h($sa['hint']) ?></div><?php } ?>
+        <div id="siteApiResult" style="margin-top:10px"></div>
+    </div>
+</div>
+
 <div class="flood-card">
     <div class="flood-card-header">สิทธิ์การใช้งาน</div>
     <div class="flood-card-body">

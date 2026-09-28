@@ -739,6 +739,7 @@ class Flood_Model extends Model {
                 'impacts' => flood_codes_names((string) $r['impacts'], $impacts),
                 'approx' => $r['loc_method'] === 'approx',
                 'fb_url' => self::publicSocialUrl($r['source_url']),
+                'web' => self::publicWebCredit($r['source_url']),
                 'time_th' => flood_thai_date($r['created_at']),
                 'ago' => flood_ago($r['created_at']),
             );
@@ -835,6 +836,7 @@ class Flood_Model extends Model {
                 'impacts' => flood_codes_names((string) $r['impacts'], $impacts),
                 'approx' => $r['loc_method'] === 'approx',
                 'fb_url' => self::publicSocialUrl($r['source_url']),
+                'web' => self::publicWebCredit($r['source_url']),
                 'time_th' => flood_thai_date($r['created_at']),
                 'ago' => flood_ago($r['created_at']),
             );
@@ -859,6 +861,17 @@ class Flood_Model extends Model {
      * ลิงก์โพสต์ต้นทางที่แสดงต่อประชาชนได้ — รับเฉพาะ https ของ Facebook เท่านั้น
      * ลิงก์อื่น/รูปแบบแปลก คืนค่าว่าง (กันลิงก์หลอกไปเว็บอื่นจากข้อมูลที่นำเข้า)
      */
+    /** เครดิตเว็บต้นทางที่อยู่ใน flood_credited_web_sources() — คืน array(url, name) หรือ null */
+    private static function publicWebCredit($url) {
+        $url = trim((string) $url);
+        if ($url === '' || strlen($url) > 500 || !preg_match('#^https://#i', $url) || !function_exists('flood_credited_web_sources')) {
+            return null;
+        }
+        $list = flood_credited_web_sources();
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        return isset($list[$host]) ? array('url' => $url, 'name' => $list[$host]) : null;
+    }
+
     private static function publicSocialUrl($url) {
         $url = preg_replace('#^http://#i', 'https://', trim((string) $url));
         if ($url === '' || strlen($url) > 500 || !preg_match('#^https://#i', $url)) {

@@ -158,6 +158,10 @@ function flood_menu_roles() {
         'help' => array('officer', 'team'),
         'vulnerable' => array('officer'),
         'teams' => array('officer'),
+        'staff' => array('officer'),   // ข้อมูลบุคลากรโรงพยาบาล (ภายใน)
+        'manpower' => array('officer'),   // อัตรากำลังพยาบาลรายเวร เทียบกรอบ ช/บ/ด
+        'sat' => array('officer', 'viewer'),   // ห้องสถานการณ์ SAT ของโรงพยาบาล (viewer ดูอย่างเดียว)
+        'hospital' => array('officer', 'viewer'),   // ภาพรวม (โรงพยาบาล) — ตัวเลขรวม ไม่มีรายชื่อ
         'settings' => array(),
     );
 }

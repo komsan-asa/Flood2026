@@ -3,7 +3,7 @@
 class Bootstrap {
 
     /** controller ที่เปิดได้โดยไม่ต้องล็อกอิน — หน้าประชาชน + API แผนที่ */
-    private $public = array('index', 'login', 'error', 'api', 'report', 'sos');
+    private $public = array('index', 'login', 'error', 'api', 'report', 'sos', 'staffreport');
 
     function __construct() {
 

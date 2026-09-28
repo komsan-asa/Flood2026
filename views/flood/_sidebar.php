@@ -13,12 +13,43 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
         <button type="button" class="flood-menu-close" id="floodMenuClose" aria-label="ปิดเมนู"><i class="fa fa-times"></i></button>
     </div>
     <nav class="flood-sidebar-nav">
+        <?php if (flood_can_menu($role, 'hospital') || flood_can_menu($role, 'sat') || flood_can_menu($role, 'staff') || flood_can_menu($role, 'manpower')) { ?>
+        <div class="flood-nav-group g-hosp">
+        <div class="flood-nav-section flood-nav-divider"><span>โรงพยาบาล</span></div>
+        <?php if (flood_can_menu($role, 'hospital')) { ?>
+        <a href="<?= URL ?>sat/overview" class="flood-nav-item<?= $activeTab === 'hospital' ? ' active' : '' ?>">
+            <i class="fa fa-hospital-o"></i><span>ภาพรวม (โรงพยาบาล)</span>
+        </a>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'sat')) { ?>
+        <a href="<?= URL ?>sat" class="flood-nav-item<?= $activeTab === 'sat' ? ' active' : '' ?>">
+            <i class="fa fa-crosshairs"></i><span>ห้องสถานการณ์ SAT</span>
+        </a>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'staff')) { ?>
+        <a href="<?= URL ?>flood/staff" class="flood-nav-item<?= $activeTab === 'staff' ? ' active' : '' ?>">
+            <i class="fa fa-user-md"></i><span>บุคลากรที่ได้รับผลกระทบ</span>
+        </a>
+        <a href="<?= URL ?>staffreport/admin" class="flood-nav-item<?= $activeTab === 'staffForm' ? ' active' : '' ?>">
+            <i class="fa fa-wpforms"></i><span>ฟอร์มบุคลากรแจ้ง</span>
+        </a>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'manpower')) { ?>
+        <a href="<?= URL ?>flood/manpower" class="flood-nav-item<?= $activeTab === 'manpower' ? ' active' : '' ?>">
+            <i class="fa fa-id-badge"></i><span>อัตรากำลังรายเวร</span>
+        </a>
+        <?php } ?>
+        </div>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'stats') || flood_can_menu($role, 'zones') || flood_can_menu($role, 'reports') || flood_can_menu($role, 'help') || flood_can_menu($role, 'vulnerable') || flood_can_menu($role, 'teams')) { ?>
+        <?php $navExtOpen = true; ?>
+        <div class="flood-nav-group g-ext">
+        <div class="flood-nav-section flood-nav-divider"><span>สถานการณ์ภายนอก</span></div>
+        <?php } ?>
         <?php if (flood_can_menu($role, 'stats')) { ?>
         <a href="<?= URL ?>flood" class="flood-nav-item<?= $activeTab === 'stats' ? ' active' : '' ?>">
             <i class="fa fa-tachometer"></i><span>ภาพรวม</span>
         </a>
-        <?php } ?>
-        <?php if (flood_can_menu($role, 'stats')) { ?>
         <a href="<?= URL ?>flood/notices" class="flood-nav-item<?= $activeTab === 'notices' ? ' active' : '' ?>">
             <i class="fa fa-newspaper-o"></i><span>ข้อมูลที่ควรรู้</span>
         </a>
@@ -50,8 +81,12 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
             <i class="fa fa-ambulance"></i><span>ทีมช่วยเหลือ</span>
         </a>
         <?php } ?>
+        <?php if (!empty($navExtOpen)) { ?>
+        </div>
+        <?php } ?>
         <?php if (flood_can_menu($role, 'settings')) { ?>
-        <div class="flood-nav-section">ผู้ดูแลระบบ</div>
+        <div class="flood-nav-group g-admin">
+        <div class="flood-nav-section flood-nav-divider"><span>ผู้ดูแลระบบ</span></div>
         <a href="<?= URL ?>flood/settingsUsers" class="flood-nav-item<?= $activeTab === 'settingsUsers' ? ' active' : '' ?>">
             <i class="fa fa-users"></i><span>ผู้ใช้งาน</span>
         </a>
@@ -67,11 +102,14 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
         <a href="<?= URL ?>flood/auditLog" class="flood-nav-item<?= $activeTab === 'auditLog' ? ' active' : '' ?>">
             <i class="fa fa-file-text-o"></i><span>ประวัติการแก้ไขข้อมูล</span>
         </a>
+        </div>
         <?php } ?>
-        <div class="flood-nav-section">หน้าประชาชน</div>
+        <div class="flood-nav-group g-public">
+        <div class="flood-nav-section flood-nav-divider"><span>หน้าประชาชน</span></div>
         <a href="<?= URL ?>" class="flood-nav-item" target="_blank" rel="noopener"><i class="fa fa-globe"></i><span>แผนที่สาธารณะ</span></a>
         <a href="<?= URL ?>report" class="flood-nav-item" target="_blank" rel="noopener"><i class="fa fa-map-marker"></i><span>ฟอร์มแจ้งจุดน้ำ</span></a>
         <a href="<?= URL ?>sos" class="flood-nav-item" target="_blank" rel="noopener"><i class="fa fa-bullhorn"></i><span>ฟอร์มขอความช่วยเหลือ</span></a>
+        </div>
     </nav>
     <div class="flood-sidebar-footer">
         <a href="<?= URL ?>flood/profile" title="ข้อมูลผู้ใช้"><i class="fa fa-user-circle"></i></a>

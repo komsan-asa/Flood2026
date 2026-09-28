@@ -157,3 +157,70 @@
 /* หน้าแผนที่ประชาชน: ผู้พัฒนา + การอนุญาตใช้โลโก้ */
 .sk-credit { margin: 14px 2px 0; padding: 10px 12px; border-radius: 14px; background: rgba(255, 255, 255, .7);
     border: 1px solid var(--sk-line, #d3e4f6); font-size: 11.5px; line-height: 1.55; color: var(--sk-muted, #5b7896); }
+
+/* ---------- บุคลากรที่ได้รับผลกระทบ (flood/staff) ---------- */
+.flood-page-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.staff-lead { margin-top: -6px; }
+.staff-flag-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.notice-chip.on b { background: #fff; color: #155e9c; }
+.staff-count { font-size: 13px; color: #5b7896; }
+.staff-row.lv-severe td:first-child { box-shadow: inset 4px 0 0 #dc2626; }
+.staff-row.lv-moderate td:first-child { box-shadow: inset 4px 0 0 #f59e0b; }
+.staff-flags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.staff-flags .tag { font-size: 11.5px; }
+.staff-clip { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.staff-src span { display: inline-block; padding: 0 6px; margin-right: 3px; border-radius: 6px; background: #eef4fb; color: #1e6fb8; font-size: 11px; }
+.staff-head { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 6px 16px; margin-bottom: 12px; }
+.staff-head .staff-flags { grid-column: 1 / -1; }
+.staff-kv span { display: block; font-size: 12px; color: #5b7896; }
+.staff-follow { padding: 12px; border-radius: 12px; background: #f5f9fd; border: 1px solid #dbe7f3; margin-bottom: 14px; }
+.chip-grid.cols-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 575px) { .chip-grid.cols-3 { grid-template-columns: 1fr 1fr; } .staff-clip { max-width: 220px; } }
+.staff-sec { margin: 6px 0 8px; font-weight: 700; }
+.staff-resp { border: 1px solid #dbe7f3; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; }
+.staff-resp summary { cursor: pointer; }
+.staff-ans { margin: 8px 0 0; font-size: 13px; }
+.staff-ans th { width: 38%; font-weight: 500; color: #5b7896; vertical-align: top; }
+.staff-merge { margin-top: 10px; font-size: 13px; }
+.staff-merge summary { cursor: pointer; color: #5b7896; }
+
+/* เมนูข้างซ้าย: หัวกลุ่มแบบเส้นคั่น ─── ชื่อกลุ่ม ─── (28 ก.ย. 69) */
+.flood-nav-section.flood-nav-divider { display: flex; align-items: center; gap: 8px; padding: 14px 8px 6px; text-transform: none; letter-spacing: 0; font-size: 12px; color: rgba(255,255,255,.6); }
+.flood-nav-section.flood-nav-divider::before, .flood-nav-section.flood-nav-divider::after { content: ""; flex: 1; border-top: 1px solid rgba(255,255,255,.25); }
+.flood-sidebar-nav > .flood-nav-divider:first-child { padding-top: 2px; }
+/* ภาพรวม (โรงพยาบาล) — sat/overview */
+.hosp-status-row { display: flex; flex-wrap: wrap; gap: 32px; }
+.hosp-status-row .sat-chip { font-size: 15px; padding: 4px 12px; margin: 4px 0; }
+.hosp-reasons { margin: 12px 0 0; padding-left: 0; list-style: none; font-size: 14px; }
+.hosp-reasons li { padding: 2px 0; }
+/* ภาพสรุปบุคลากรที่ได้รับผลกระทบ — views/flood/_staff_summary.php (หน้า staff / manpower) */
+.ss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 767px) { .ss-grid { grid-template-columns: 1fr; } }
+.ss-sub { font-weight: 600; font-size: 14px; color: #18212d; margin-bottom: 8px; }
+.ss-row { display: grid; grid-template-columns: minmax(120px, 190px) 1fr 44px; align-items: center; gap: 10px; padding: 4px 0; color: #243142; text-decoration: none; font-size: 14px; }
+a.ss-row:hover { text-decoration: none; background: #f0f7fd; border-radius: 6px; }
+.ss-track { display: block; height: 16px; }
+.ss-bar { display: block; height: 16px; border-radius: 4px; background: #2b6cb0; }
+.ss-bar.is-urgent { background: #b8430c; }
+.ss-n { text-align: right; }
+.ss-foot { margin-top: 8px; }
+.ss-table { margin-bottom: 4px; }
+
+/* เมนูข้าง: แยกสีพื้นกลุ่ม "โรงพยาบาล" (เขียวอมฟ้า) กับ "สถานการณ์ภายนอก" (ฟ้า) — 28 ก.ย. 69 */
+.flood-nav-group { border-radius: 10px; padding: 0 4px 4px; margin: 4px 0 10px; }
+.flood-nav-group > .flood-nav-section.flood-nav-divider { padding-top: 8px; }
+.flood-nav-group.g-hosp { background: rgba(20, 184, 166, .16); box-shadow: inset 0 0 0 1px rgba(45, 212, 191, .28); }
+.flood-nav-group.g-hosp > .flood-nav-divider { color: #99f6e4; }
+.flood-nav-group.g-hosp > .flood-nav-divider::before, .flood-nav-group.g-hosp > .flood-nav-divider::after { border-top-color: rgba(153, 246, 228, .35); }
+.flood-nav-group.g-hosp .flood-nav-item.active { box-shadow: inset 3px 0 0 #5eead4; }
+.flood-nav-group.g-ext { background: rgba(96, 165, 250, .10); box-shadow: inset 0 0 0 1px rgba(147, 197, 253, .20); }
+.flood-nav-group.g-ext > .flood-nav-divider { color: #bfdbfe; }
+.flood-nav-group.g-ext > .flood-nav-divider::before, .flood-nav-group.g-ext > .flood-nav-divider::after { border-top-color: rgba(191, 219, 254, .35); }
+/* กลุ่ม "ผู้ดูแลระบบ" (ม่วง) และ "หน้าประชาชน" (อำพัน) */
+.flood-nav-group.g-admin { background: rgba(167, 139, 250, .14); box-shadow: inset 0 0 0 1px rgba(196, 181, 253, .25); }
+.flood-nav-group.g-admin > .flood-nav-divider { color: #ddd6fe; }
+.flood-nav-group.g-admin > .flood-nav-divider::before, .flood-nav-group.g-admin > .flood-nav-divider::after { border-top-color: rgba(221, 214, 254, .35); }
+.flood-nav-group.g-admin .flood-nav-item.active { box-shadow: inset 3px 0 0 #c4b5fd; }
+.flood-nav-group.g-public { background: rgba(251, 191, 36, .12); box-shadow: inset 0 0 0 1px rgba(252, 211, 77, .25); }
+.flood-nav-group.g-public > .flood-nav-divider { color: #fde68a; }
+.flood-nav-group.g-public > .flood-nav-divider::before, .flood-nav-group.g-public > .flood-nav-divider::after { border-top-color: rgba(253, 230, 138, .35); }

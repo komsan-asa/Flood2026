@@ -113,7 +113,7 @@ $tab = function ($s) use ($f) {
                 <tr class="row-link" data-href="<?= URL ?>flood/helpView/<?= (int) $h['help_id'] ?>">
                     <td data-label="ความเร่งด่วน"><?= flood_status_label($pr, $h['priority']) ?></td>
                     <td data-label="เลขที่" class="nowrap"><a href="<?= URL ?>flood/helpView/<?= (int) $h['help_id'] ?>"><b><?= h($h['ref_code']) ?></b></a>
-                        <div class="small-muted"><?= $h['source'] === 'phone' ? '<i class="fa fa-phone"></i> รับทางโทรศัพท์' : ($h['source'] === 'facebook' ? '<i class="fa fa-facebook-square"></i> จาก Facebook' : '<i class="fa fa-globe"></i> ส่งทางเว็บ') ?>
+                        <div class="small-muted"><?= $h['source'] === 'phone' ? '<i class="fa fa-phone"></i> รับทางโทรศัพท์' : ($h['source'] === 'facebook' ? '<i class="fa fa-facebook-square"></i> จาก Facebook' : ($h['source'] === 'web' ? '<i class="fa fa-globe"></i> จากเว็บภายนอก' : '<i class="fa fa-globe"></i> ส่งทางเว็บ')) ?>
                         <?= (int) $h['photo_count'] ? ' · <i class="fa fa-camera"></i> ' . (int) $h['photo_count'] : '' ?></div>
                     </td>
                     <td data-label="ต้องการ">

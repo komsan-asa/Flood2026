@@ -1,0 +1,91 @@
+/* อัตรากำลังพยาบาลรายเวร — flood/manpower, flood/manpowerUnits */
+.mp-bar { margin-bottom: 12px; }
+.mp-datenav { display: flex; gap: 6px; align-items: center; }
+.mp-bar .mp-datenav .mp-date { min-width: 150px; }
+@media (max-width: 640px) {
+    .mp-datenav { flex: 1 1 100%; }
+    .filter-bar .mp-datenav .btn { flex: 0 0 auto; width: auto; }
+    .filter-bar .mp-datenav .mp-date { flex: 1 1 auto; width: auto; min-width: 0; }
+}
+.mp-only-short { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-weight: 500; font-size: 14px; cursor: pointer; }
+
+.mp-day {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 12px;
+    padding: 10px 14px; border-radius: 12px; background: #fff; border: 1px solid #dfe6ee; font-size: 15px;
+}
+.mp-day.is-holiday { background: #fff7ed; border-color: #fed7aa; }
+.mp-day-tag { color: #4d5663; }
+.mp-day.is-holiday .mp-day-tag { color: #9a3412; font-weight: 600; }
+.mp-day-now { margin-left: auto; color: #155e9c; font-weight: 600; }
+
+/* สรุปต่อเวร */
+.mp-sum-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.mp-sum { background: #fff; border: 1px solid #dfe6ee; border-radius: 14px; padding: 12px 14px; }
+.mp-sum.is-now { border-color: #2f7fc9; box-shadow: 0 0 0 2px rgba(47, 127, 201, .18); }
+.mp-sum.has-short { border-left: 5px solid #dc2626; }
+.mp-sum-h { font-weight: 700; color: #18212d; }
+.mp-sum-h small { font-weight: 400; color: #6b7482; }
+.mp-sum-v { font-size: 30px; font-weight: 700; line-height: 1.2; margin: 4px 0 8px; color: #18212d; }
+.mp-sum-v span { font-size: 15px; font-weight: 500; color: #6b7482; }
+.mp-sum-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.mp-chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; }
+@media (max-width: 767px) {
+    .mp-sum-grid { grid-template-columns: minmax(0, 1fr); }
+    .mp-day-now { margin-left: 0; }
+}
+
+/* สีสถานะ (ข้อความ + พื้น ใช้ร่วมกันทั้ง chip และช่องในตาราง) */
+.st-short { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+.st-ok { background: #dcfce7; color: #166534; border-color: #86efac; }
+.st-over { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.st-nodata { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.st-wait { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+
+/* ตาราง */
+.mp-table { margin: 0; }
+.mp-table th { white-space: nowrap; }
+.mp-table th small { font-weight: 400; color: #6b7482; }
+.mp-table td { vertical-align: middle !important; }
+.mp-table .mp-col { text-align: center; width: 17%; }
+.mp-table .mp-col.is-now { background: #f0f7fd; }
+.mp-group td { background: #f4f7fa; font-weight: 700; color: #155e9c; font-size: 13px; padding-top: 6px !important; padding-bottom: 6px !important; }
+.mp-unit b { color: #18212d; }
+.mp-none { color: #b6bec9; }
+.mp-cell {
+    position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    min-width: 88px; padding: 5px 10px; border-radius: 10px; border: 1px solid; cursor: pointer; line-height: 1.2;
+}
+.mp-cell:hover, .mp-cell:focus { filter: brightness(.97); outline: 2px solid rgba(47, 127, 201, .35); outline-offset: 1px; }
+.mp-num { font-size: 20px; font-weight: 700; }
+.mp-num small { font-size: 13px; font-weight: 500; opacity: .75; }
+.mp-st { font-size: 12px; font-weight: 600; }
+.mp-src { position: absolute; top: 4px; right: 5px; font-size: 10px; opacity: .6; }
+.mp-hide { display: none; }
+.mp-foot { margin-top: 10px; line-height: 1.7; }
+@media (max-width: 640px) {
+    .mp-cell { min-width: 64px; padding: 4px 6px; }
+    .mp-num { font-size: 17px; }
+    .mp-table .mp-unit { min-width: 140px; }
+}
+
+/* หน้าต่างกรอกจำนวน */
+.mp-m-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.mp-m-stats > div { background: #f4f7fa; border-radius: 10px; padding: 8px; text-align: center; }
+.mp-m-stats small { display: block; color: #6b7482; }
+.mp-m-stats b { font-size: 20px; }
+.mp-m-list { max-height: 180px; overflow: auto; margin-bottom: 12px; font-size: 13px; }
+.mp-m-list table { width: 100%; }
+.mp-m-list td { padding: 3px 6px; border-bottom: 1px solid #eef2f6; }
+
+/* ตั้งค่ากรอบ */
+.mp-units-table input.form-control { padding: 4px 6px; height: 32px; }
+.mp-units-table .mp-n { width: 58px; text-align: center; }
+.mp-units-table td { vertical-align: middle !important; }
+.mp-units-table th small { font-weight: 400; color: #6b7482; }
+.mp-hol-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.mp-hol-row .form-control { width: auto; }
+
+/* สถานะการดึงข้อมูลลงเวลา */
+.mp-api { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px;
+    padding: 8px 12px; border-radius: 10px; background: #f0f7fd; border: 1px solid #bddbf4; font-size: 14px; color: #1e3a5f; }
+.mp-api.is-err { background: #fef2f2; border-color: #fca5a5; }

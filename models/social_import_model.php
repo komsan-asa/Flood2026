@@ -108,6 +108,12 @@ class Social_Import_Model extends Model {
         return mb_substr($base, 0, 500);
     }
 
+    /** ลิงก์ข่าวเว็บทั่วไป (http/https) ตัด #fragment ออก */
+    private function webUrl($u) {
+        $u = trim((string) $u);
+        return preg_match('#^https?://[^\s]+$#i', $u) ? mb_substr(preg_replace('/#.*$/', '', $u), 0, 500) : '';
+    }
+
     private $noticeModel = null;
 
     private function importNotice($it, $user, $uid, $label, $out) {
@@ -121,7 +127,8 @@ class Social_Import_Model extends Model {
             return $out;
         }
         $src = $it;
-        $src['source_url'] = $this->cleanUrl(isset($it['url']) ? $it['url'] : '') ?: '';
+        // ข้อมูลที่ควรรู้รับลิงก์ข่าวจากเว็บได้ด้วย (รายงานจุดน้ำยังรับเฉพาะลิงก์ Facebook)
+        $src['source_url'] = $this->cleanUrl(isset($it['url']) ? $it['url'] : '') ?: $this->webUrl(isset($it['url']) ? $it['url'] : '');
         $src['info_at'] = $this->postedAt(isset($it['posted_at']) ? $it['posted_at'] : '');
         if (!isset($src['verify'])) {
             $src['verify'] = 'unverified';
@@ -135,7 +142,8 @@ class Social_Import_Model extends Model {
             $out['errors'][] = $label . ': ' . $data;
             return $out;
         }
-        if ($nm->findDuplicate($data['title'], $data['source_url'])) {
+        // ข่าวเดียวอาจมีหลายเรื่อง (ถนนปิด/ศูนย์พักพิง/โรงเรียนปิด) → ถือว่าซ้ำเมื่อหัวข้อซ้ำเท่านั้น
+        if ($nm->findDuplicate($data['title'], '')) {
             $out['skipped'][] = $label . ' (มีข้อมูลนี้แล้ว)';
             return $out;
         }
@@ -172,11 +180,24 @@ class Social_Import_Model extends Model {
                     continue;
                 }
                 $srcName = mb_substr(trim(isset($it['source_name']) ? (string) $it['source_name'] : 'Facebook'), 0, 120);
-                $url = $this->cleanUrl(isset($it['url']) ? $it['url'] : '');
+                // source = web → ข้อมูลจากเว็บภายนอก (ให้เครดิตชื่อเว็บ + ลิงก์) แทนโพสต์ Facebook
+                $isWeb = isset($it['source']) && $it['source'] === 'web';
+                $prefix = $isWeb ? 'เว็บ: ' : 'Facebook: ';
+                $url = $isWeb ? ($this->webUrl(isset($it['url']) ? $it['url'] : '') ?: null) : $this->cleanUrl(isset($it['url']) ? $it['url'] : '');
                 $place = mb_substr(trim(isset($it['place']) ? (string) $it['place'] : ''), 0, 200);
                 $note = trim(isset($it['note']) ? (string) $it['note'] : '');
                 $at = $this->postedAt(isset($it['posted_at']) ? $it['posted_at'] : '');
                 $kind = isset($it['kind']) && $it['kind'] === 'help' ? 'help' : 'report';
+                // พิกัดจริงจากต้นทาง (หมุดที่ผู้แจ้งปักเอง / GPS ของผู้ขอความช่วยเหลือ) — ใช้เมื่ออยู่ในอำเภอเดียวกับที่ระบุ
+                $pin = null;
+                if (isset($it['lat'], $it['lng']) && flood_valid_latlng((float) $it['lat'], (float) $it['lng'])) {
+                    $g = $flood->guessArea((float) $it['lat'], (float) $it['lng'], 15);
+                    if ($g && $g['amphoe_code'] === $loc['amphoe_code']) {
+                        $pin = true;
+                        $loc = array('lat' => (float) $it['lat'], 'lng' => (float) $it['lng'], 'amphoe_code' => $g['amphoe_code'],
+                            'tambon_code' => $g['tambon_code'], 'label' => 'ต.' . $g['name'] . ' อ.' . $g['amphoe_name']);
+                    }
+                }
                 if ($place === '') {
                     $out['errors'][] = $label . ': ไม่มีชื่อจุด/สถานที่';
                     continue;
@@ -187,7 +208,7 @@ class Social_Import_Model extends Model {
                     $dup = $this->db->selectValue(
                         "SELECT ref_code FROM flood_report
                          WHERE reporter_name = :n AND LEFT(place_note, CHAR_LENGTH(:p)) = :p2 AND created_at >= :d LIMIT 1",
-                        array(':n' => mb_substr('Facebook: ' . $srcName, 0, 150), ':p' => $place, ':p2' => $place,
+                        array(':n' => mb_substr($prefix . $srcName, 0, 150), ':p' => $place, ':p2' => $place,
                             ':d' => date('Y-m-d H:i:s', time() - 3 * 86400)));
                     if ($dup) {
                         $out['skipped'][] = $label . ' (มีแล้ว ' . $dup . ')';
@@ -200,7 +221,7 @@ class Social_Import_Model extends Model {
                         }
                     }
                     $data = array(
-                        'lat' => $loc['lat'], 'lng' => $loc['lng'], 'accuracy_m' => null, 'loc_method' => 'approx',
+                        'lat' => $loc['lat'], 'lng' => $loc['lng'], 'accuracy_m' => null, 'loc_method' => $pin ? 'pin' : 'approx',
                         'depth' => $this->pick(isset($it['depth']) ? $it['depth'] : null, flood_depth_options(), 'knee'),
                         'extent' => $this->pick(isset($it['extent']) ? $it['extent'] : null, flood_extent_options(), 'road'),
                         'houses' => null,
@@ -208,7 +229,7 @@ class Social_Import_Model extends Model {
                         'trend' => $this->pick(isset($it['trend']) ? $it['trend'] : null, flood_trend_options()),
                         'impacts' => $impacts ? implode(',', $impacts) : null,
                         'place_note' => mb_substr($place . ($note !== '' ? ' — ' . $note : ''), 0, 255),
-                        'reporter_name' => mb_substr('Facebook: ' . $srcName, 0, 150),
+                        'reporter_name' => mb_substr($prefix . $srcName, 0, 150),
                         'reporter_phone' => '',
                         'status' => 'pending',
                         'ip' => 'import',
@@ -216,14 +237,17 @@ class Social_Import_Model extends Model {
                         'created_at' => $at,
                     );
                     if ($hasSource) {
-                        $data['source'] = 'facebook';
+                        $data['source'] = $isWeb ? 'web' : 'facebook';
                         $data['source_name'] = $srcName;
                         $data['source_url'] = $url;
                     }
                     $ref = $flood->createReport($data, array());
                     $out['created'][] = array('kind' => 'report', 'ref' => $ref['ref'], 'place' => $place, 'where' => $loc['label']);
                 } else {
-                    if ($url && $this->db->selectValue("SELECT ref_code FROM flood_help WHERE detail LIKE :u LIMIT 1", array(':u' => '%' . $url . '%'))) {
+                    // ซ้ำ = รหัสรายการต้นทางเดียวกัน (เว็บ) หรือโพสต์เดียวกัน (Facebook)
+                    $extId = isset($it['ext_id']) ? preg_replace('/[^A-Za-z0-9_.:-]/', '', (string) $it['ext_id']) : '';
+                    $dupKey = $extId !== '' ? 'รหัสต้นทาง: ' . $extId : (string) $url;
+                    if ($dupKey !== '' && $this->db->selectValue("SELECT ref_code FROM flood_help WHERE detail LIKE :u LIMIT 1", array(':u' => '%' . $dupKey . '%'))) {
                         $out['skipped'][] = $label . ' (มีใบงานแล้ว)';
                         continue;
                     }
@@ -240,21 +264,26 @@ class Social_Import_Model extends Model {
                         }
                     }
                     $pr = isset($it['priority']) && in_array($it['priority'], array('urgent', 'high', 'normal'), true) ? $it['priority'] : 'high';
-                    $detail = "นำเข้าจากโพสต์ Facebook ({$srcName}) — ยังไม่มีเบอร์ผู้ขอ ต้องติดตามผ่านผู้นำชุมชน/อปท.\n" . $note
-                        . ($url ? "\nโพสต์ต้นทาง: " . $url : '');
+                    $detail = ($isWeb
+                            ? "นำเข้าจากเว็บ {$srcName} — ผู้ขอแจ้งผ่านเว็บนั้นเอง ยังไม่ได้โทรยืนยัน\n"
+                            : "นำเข้าจากโพสต์ Facebook ({$srcName}) — ยังไม่มีเบอร์ผู้ขอ ต้องติดตามผ่านผู้นำชุมชน/อปท.\n") . $note
+                        . ($url ? "\n" . ($isWeb ? 'ต้นทาง: ' : 'โพสต์ต้นทาง: ') . $url : '')
+                        . ($extId !== '' ? "\nรหัสต้นทาง: " . $extId : '');
+                    // เว็บ SOS: ผู้ขอกรอกเบอร์เองเพื่อให้ติดต่อกลับ — เก็บในใบงาน (เห็นเฉพาะเจ้าหน้าที่)
+                    $phone = $isWeb && isset($it['phone']) ? preg_replace('/[^0-9]/', '', (string) $it['phone']) : '';
                     $h = $flood->createHelp(array(
                         'needs' => implode(',', $needs ? $needs : array('other')),
                         'detail' => $detail,
                         'people_count' => isset($it['people_count']) && (int) $it['people_count'] > 0 ? (int) $it['people_count'] : null,
                         'vulnerable_flags' => $flags ? implode(',', $flags) : null,
                         'lat' => $loc['lat'], 'lng' => $loc['lng'], 'accuracy_m' => null,
-                        'address' => mb_substr($place . ' (' . $loc['label'] . ' · พิกัดกลางตำบลโดยประมาณ)', 0, 255),
+                        'address' => mb_substr($place . ' (' . $loc['label'] . ($pin ? ' · พิกัดจากผู้แจ้ง' : ' · พิกัดกลางตำบลโดยประมาณ') . ')', 0, 255),
                         'amphoe_code' => $loc['amphoe_code'], 'tambon_code' => $loc['tambon_code'],
-                        'requester_name' => mb_substr('Facebook: ' . $srcName, 0, 150),
-                        'requester_phone' => '',
+                        'requester_name' => mb_substr($prefix . $srcName . ($isWeb && !empty($it['contact_name']) ? ' · ' . trim((string) $it['contact_name']) : ''), 0, 150),
+                        'requester_phone' => (strlen($phone) >= 9 && strlen($phone) <= 10) ? $phone : '',
                         'priority' => $pr,
                         'status' => 'new',
-                        'source' => 'facebook',
+                        'source' => $isWeb ? 'web' : 'facebook',
                         'created_by' => $uid,
                         'ip' => 'import',
                         'user_agent' => mb_substr($ua, 0, 255),

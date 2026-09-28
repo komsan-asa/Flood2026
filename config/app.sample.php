@@ -36,8 +36,8 @@ define('DB_PASS', '<รหัสผ่านฐานข้อมูล>');
 define('SYSTEM_NAME', 'ระบบช่วยเหลือผู้ประสบภัยน้ำท่วม จังหวัดสระแก้ว');
 define('SYSTEM_NAME_THAI', 'ระบบช่วยเหลือผู้ประสบภัยน้ำท่วม จังหวัดสระแก้ว');
 define('DEPARTMENT_NAME', 'โรงพยาบาลสมเด็จพระยุพราชสระแก้ว');
-define('TITLE_SYSTEM_NAME', 'SK Flood — สถานการณ์น้ำ จังหวัดสระแก้ว');
-define('SHORT_NAME_SYSTEM', 'SK Flood');
+define('TITLE_SYSTEM_NAME', 'Thailand Flood — สถานการณ์น้ำ จังหวัดสระแก้ว');
+define('SHORT_NAME_SYSTEM', 'Thailand Flood');
 define('PROVINCE_NAME', 'สระแก้ว');
 
 // ผู้ดูแลระบบที่ให้ผู้ใช้ติดต่อเมื่อสิทธิ์ไม่พอ (แสดงบนหน้าจอ)
@@ -74,3 +74,11 @@ define('PUBLIC_LIMIT_PER_PHONE_HOUR', 6);   // ต่อเบอร์โทร
 // ค่าเริ่มต้นเมื่อไม่ประกาศ: เปิดบนเว็บ / ปิดบน CLI
 // define('AUDIT_LOG_ENABLED', true);
 // define('AUDIT_SKIP_TABLES', '');
+
+// ---- Flood2026-site-api (ฐาน hosoffice: ผู้ใช้ + ข้อมูลลงเวลาเข้าเวร) ----
+// ค่าเริ่มต้น: เรียกในโปรเซสเดียวกันจากโฟลเดอร์ข้างเคียง ../Flood2026-site-api (ต้องมี config/config.php ของ API)
+// define('SITE_API_PATH', '/var/www/html/Flood2026-site-api');
+// define('SITE_API_KEY', '');                // ว่าง/ไม่ประกาศ = ใช้ api_key จาก config ของ API (เรียกในเครื่องเดียวกัน)
+// define('SITE_API_URL', 'http://10.0.0.5/Flood2026-site-api/index.php');   // ใช้เมื่อ API อยู่คนละเครื่อง (ต้องตั้ง SITE_API_KEY)
+// define('MP_RN_REGEX', 'พยาบาลวิชาชีพ');    // ตำแหน่งที่นับเป็นพยาบาลวิชาชีพ (REGEX)
+// define('MP_SYNC_MINUTES', 5);             // หน้าอัตรากำลังดึงข้อมูลลงเวลาใหม่อัตโนมัติทุกกี่นาที
