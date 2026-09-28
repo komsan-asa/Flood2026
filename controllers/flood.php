@@ -1919,7 +1919,9 @@ class Flood extends Controller {
         $this->view->js[] = 'flood/js/users.js';
         $this->view->js[] = 'flood/js/site_users.js';
         require_once 'models/site_api_model.php';
-        $this->view->siteApi = array('on' => FloodSiteApi::enabled(), 'hint' => FloodSiteApi::setupHint(), 'mode' => FloodSiteApi::mode());
+        require_once 'models/hosoffice_api_model.php';
+        // ผู้ใช้จาก hosoffice ดึงผ่าน hos-office-site-api (28 ก.ย. 69) — Flood2026-site-api เหลือเฉพาะระบบลงเวลา
+        $this->view->siteApi = array('on' => HosOfficeApi::enabled(), 'hint' => HosOfficeApi::setupHint(), 'mode' => 'hos-office-site-api');
         $this->view->userFilters = $filters;
         $this->view->userRows = $this->model->listUsers($filters);
         $this->view->teams = $this->model->getTeams(true);
@@ -1934,24 +1936,61 @@ class Flood extends Controller {
     function siteApiTest() {
         $this->requireAdmin(true);
         require_once 'models/site_api_model.php';
-        if (!FloodSiteApi::enabled()) {
-            flood_json(array('chk' => false, 'msg' => FloodSiteApi::setupHint()));
+        require_once 'models/hosoffice_api_model.php';
+        if (!HosOfficeApi::enabled()) {
+            flood_json(array('chk' => false, 'msg' => HosOfficeApi::setupHint()));
         }
-        $h = FloodSiteApi::call('health');
-        $s = !empty($h['ok']) ? FloodSiteApi::call('v1/schema') : array();
-        flood_json(array('chk' => !empty($h['ok']), 'msg' => !empty($h['ok']) ? 'เชื่อมต่อ API ได้' : (isset($h['error']) ? $h['error'] : 'เชื่อมต่อไม่ได้'),
-            'health' => $h, 'schema' => $s));
+        $hh = HosOfficeApi::health();
+        $health = array('service' => HosOfficeApi::NAME, 'version' => '',
+            'hosoffice_ok' => !empty($hh['ok']), 'hosoffice_error' => isset($hh['error']) ? $hh['error'] : '');
+        // ระบบลงเวลายังอยู่ที่ Flood2026-site-api
+        if (FloodSiteApi::enabled()) {
+            $h = FloodSiteApi::call('health');
+            $health['hik_ok'] = !empty($h['hik_ok']);
+            $health['hik_error'] = isset($h['hik_error']) ? $h['hik_error'] : (isset($h['error']) ? $h['error'] : '');
+        } else {
+            $health['hik_ok'] = false;
+            $health['hik_error'] = FloodSiteApi::setupHint() ?: 'ยังไม่ได้ตั้งค่า Flood2026-site-api';
+        }
+        $schema = array();
+        if (!empty($hh['ok'])) {
+            $u = HosOfficeApi::users();
+            if (!empty($u['ok'])) {
+                $act = 0;
+                $depts = array();
+                foreach ($u['rows'] as $r) {
+                    if ($r['active']) {
+                        $act++;
+                        if ($r['dept_name'] !== '') {
+                            $depts[$r['dept_name']] = (isset($depts[$r['dept_name']]) ? $depts[$r['dept_name']] : 0) + 1;
+                        }
+                    }
+                }
+                arsort($depts);
+                $schema['sql_users'] = array('ok' => true, 'rows' => (int) $hh['persons'], 'with_username' => count($u['rows'])
+                    . ' (ปฏิบัติงาน ' . $act . ')', 'departments' => $depts);
+            } else {
+                $schema['sql_users'] = array('ok' => false, 'error' => $u['error']);
+            }
+        }
+        flood_json(array('chk' => !empty($hh['ok']), 'msg' => !empty($hh['ok']) ? 'เชื่อมต่อ hosoffice ได้' : $health['hosoffice_error'],
+            'health' => $health, 'schema' => $schema));
     }
 
-    /** นำเข้าผู้ใช้จาก hosoffice (HR_USERNAME = ชื่อผู้ใช้) — ไม่ลดสิทธิ์ผู้ใช้เดิม */
+    /** นำเข้าผู้ใช้จาก hosoffice ผ่าน hos-office-site-api (HR_USERNAME = ชื่อผู้ใช้) — ไม่ลดสิทธิ์ผู้ใช้เดิม */
     function siteApiImportUsers() {
         $this->requireAdmin(true);
         require_once 'models/site_api_model.php';
+        require_once 'models/hosoffice_api_model.php';
+        if (!HosOfficeApi::enabled()) {
+            flood_json(array('chk' => false, 'msg' => HosOfficeApi::setupHint()));
+        }
         $sm = new Site_Api_Model();
         if (!$sm->ensureColumns()) {
             flood_json(array('chk' => false, 'msg' => 'เพิ่มคอลัมน์ auth_source ในตาราง flood_user ไม่ได้ — ให้ผู้ดูแลรัน php sql/apply_schema.php 19'));
         }
-        $r = FloodSiteApi::call('v1/users');
+        @set_time_limit(180);
+        $r = HosOfficeApi::users();
         if (empty($r['ok'])) {
             flood_json(array('chk' => false, 'msg' => isset($r['error']) ? $r['error'] : 'ดึงรายชื่อไม่สำเร็จ'));
         }

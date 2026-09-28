@@ -44,7 +44,7 @@ $(function () {
                 : '<span class="text-danger"><i class="fa fa-times-circle"></i> ' + esc(e || 'เชื่อมต่อไม่ได้') + '</span>';
         };
         var html = '<div class="alert alert-' + (h.hosoffice_ok ? 'success' : 'warning') + '" style="margin:0 0 8px">'
-            + 'API ' + esc(h.service || '') + ' v' + esc(h.version || '') + (h.mock ? ' <b>(โหมดข้อมูลตัวอย่าง)</b>' : '')
+            + 'API ' + esc(h.service || '') + (h.version ? ' v' + esc(h.version) : '') + (h.mock ? ' <b>(โหมดข้อมูลตัวอย่าง)</b>' : '')
             + '<br>ฐาน hosoffice: ' + ok(h.hosoffice_ok, h.hosoffice_error)
             + '<br>ระบบลงเวลา: ' + ok(h.hik_ok, h.hik_error) + '</div>';
         ['sql_users', 'sql_user_auth'].forEach(function (k) {

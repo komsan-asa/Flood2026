@@ -71,14 +71,15 @@ class Login_Model extends Model {
     private function hosofficeVerify($row, $password) {
         try {
             require_once 'models/site_api_model.php';
-            if (!FloodSiteApi::enabled()) {
+            require_once 'models/hosoffice_api_model.php';
+            if (!HosOfficeApi::enabled()) {
                 return false;
             }
             $sm = new Site_Api_Model();
             if ($sm->authSource($row['user_id']) !== Site_Api_Model::SOURCE) {
                 return false;
             }
-            $r = FloodSiteApi::call('v1/user-verify', array('username' => $row['loginname'], 'password' => $password), true);
+            $r = HosOfficeApi::verify($row['loginname'], $password);   // hos-office-site-api (ฐาน hosoffice)
             if (empty($r['ok'])) {
                 error_log('[Flood login] hosoffice verify: ' . (isset($r['error']) ? $r['error'] : ''));
                 return false;
