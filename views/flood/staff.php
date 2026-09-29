@@ -15,49 +15,62 @@ $qs = function ($extra) use ($f) {
     return URL . 'flood/staff?' . http_build_query(array_filter(array_merge($f, $extra)));
 };
 $exportUrl = URL . 'flood/staffExport?' . http_build_query(array_filter($f));
+$full = !empty($this->staffFull);   // false = ผู้บริหาร/ดูอย่างเดียว: ตัวเลขรวมเท่านั้น
+$kpiTag = function ($href, $cls) use ($full) {
+    return $full ? '<a class="' . $cls . '" href="' . h($href) . '">' : '<div class="' . $cls . '">';
+};
+$kpiEnd = $full ? '</a>' : '</div>';
 ?>
 <div class="flood-page-header">
     <h2 class="flood-page-title"><i class="fa fa-user-md"></i> บุคลากรที่ได้รับผลกระทบ</h2>
+    <?php if ($full) { ?>
     <div class="flood-page-actions">
         <a href="<?= URL ?>staffreport/admin" class="btn btn-default"><i class="fa fa-wpforms"></i> ฟอร์มให้บุคลากรแจ้ง</a>
         <a href="<?= h($exportUrl) ?>" class="btn btn-default"><i class="fa fa-file-excel-o"></i> ส่งออก CSV</a>
         <button type="button" class="btn btn-primary js-staff-sync" data-id="0"><i class="fa fa-refresh"></i> ดึงคำตอบใหม่ทุกฟอร์ม</button>
     </div>
+    <?php } ?>
 </div>
+<?php if (!$full) { ?>
+<p class="text-muted staff-lead"><i class="fa fa-eye"></i> ภาพรวมตัวเลข (ดูอย่างเดียว) — ไม่แสดงรายชื่อและข้อมูลติดต่อของบุคลากร · รายชื่อและการติดตามดูได้เฉพาะเจ้าหน้าที่ศูนย์และผู้ดูแลระบบ</p>
+<?php } else { ?>
 <p class="text-muted staff-lead"><i class="fa fa-lock"></i> ข้อมูลภายในโรงพยาบาล — เห็นเฉพาะเจ้าหน้าที่ศูนย์และผู้ดูแลระบบ · รวมคำตอบจากแบบสำรวจ <?= count($sources) ?> ฟอร์ม เป็นรายชื่อเดียว (จับคู่คนเดียวกันด้วยเบอร์โทร แล้วจึงชื่อ-สกุล) · ไม่เก็บเลขบัตรประชาชน</p>
+<?php } ?>
 
 <?php if (!$this->staffReady) { ?>
 <div class="alert alert-danger">ยังไม่มีตาราง flood_staff และระบบสร้างเองไม่ได้ — ให้ผู้ดูแลรัน <code>php sql/apply_schema.php 17</code></div>
 <?php return; } ?>
 
 <?php if ((int) $s['total'] === 0) { ?>
-<div class="alert alert-info"><i class="fa fa-info-circle"></i> ยังไม่มีข้อมูล — กด <b>ดึงคำตอบใหม่ทุกฟอร์ม</b> เพื่อนำเข้าจาก Google Sheet ครั้งแรก</div>
+<div class="alert alert-info"><i class="fa fa-info-circle"></i> ยังไม่มีข้อมูล<?php if (!$full) { ?></div><?php } else { ?> — กด <b>ดึงคำตอบใหม่ทุกฟอร์ม</b> เพื่อนำเข้าจาก Google Sheet ครั้งแรก</div><?php } ?>
 <?php } ?>
 
 <div class="flood-kpi-grid">
-    <a class="flood-kpi-card" href="<?= URL ?>flood/staff"><i class="fa fa-users kpi-icon"></i>
+    <?= $kpiTag(URL . 'flood/staff', 'flood-kpi-card') ?><i class="fa fa-users kpi-icon"></i>
         <div class="kpi-value"><?= (int) $s['total'] ?></div><div class="kpi-label">บุคลากรที่ตอบแบบสำรวจ</div>
-        <div class="kpi-sub"><?= (int) $s['responses'] ?> คำตอบจากทุกฟอร์ม</div></a>
-    <a class="flood-kpi-card<?= $s['severe'] ? ' kpi-danger' : '' ?>" href="<?= h($qs(array('level' => 'severe', 'page' => null))) ?>"><i class="fa fa-exclamation-triangle kpi-icon"></i>
+        <div class="kpi-sub"><?= (int) $s['responses'] ?> คำตอบจากทุกฟอร์ม</div><?= $kpiEnd ?>
+    <?= $kpiTag($qs(array('level' => 'severe', 'page' => null)), 'flood-kpi-card' . ($s['severe'] ? ' kpi-danger' : '')) ?><i class="fa fa-exclamation-triangle kpi-icon"></i>
         <div class="kpi-value"><?= (int) $s['severe'] ?></div><div class="kpi-label">ผลกระทบรุนแรง</div>
-        <div class="kpi-sub">บ้านท่วม · ถูกตัดขาด · มาทำงานไม่ได้ · ไม่มีที่พัก</div></a>
-    <a class="flood-kpi-card<?= $s['moderate'] ? ' kpi-warn' : '' ?>" href="<?= h($qs(array('level' => 'moderate'))) ?>"><i class="fa fa-road kpi-icon"></i>
+        <div class="kpi-sub">บ้านท่วม · ถูกตัดขาด · มาทำงานไม่ได้ · ไม่มีที่พัก</div><?= $kpiEnd ?>
+    <?= $kpiTag($qs(array('level' => 'moderate')), 'flood-kpi-card' . ($s['moderate'] ? ' kpi-warn' : '')) ?><i class="fa fa-road kpi-icon"></i>
         <div class="kpi-value"><?= (int) $s['moderate'] ?></div><div class="kpi-label">ผลกระทบปานกลาง</div>
-        <div class="kpi-sub">ถนนถูกปิด เดินทางลำบาก / กลับบ้านไม่ได้</div></a>
-    <a class="flood-kpi-card<?= $s['waiting'] ? ' kpi-danger' : ' kpi-ok' ?>" href="<?= h($qs(array('level' => 'affected', 'follow' => 'new'))) ?>"><i class="fa fa-phone kpi-icon"></i>
+        <div class="kpi-sub">ถนนถูกปิด เดินทางลำบาก / กลับบ้านไม่ได้</div><?= $kpiEnd ?>
+    <?= $kpiTag($qs(array('level' => 'affected', 'follow' => 'new')), 'flood-kpi-card' . ($s['waiting'] ? ' kpi-danger' : ' kpi-ok')) ?><i class="fa fa-phone kpi-icon"></i>
         <div class="kpi-value"><?= (int) $s['waiting'] ?></div><div class="kpi-label">ได้รับผลกระทบ ยังไม่ติดตาม</div>
-        <div class="kpi-sub">รุนแรง + ปานกลาง ที่สถานะ "ยังไม่ติดตาม"</div></a>
+        <div class="kpi-sub">รุนแรง + ปานกลาง ที่สถานะ "ยังไม่ติดตาม"</div><?= $kpiEnd ?>
 </div>
 
 <div class="staff-flag-row">
     <?php foreach ($flags as $code => $fl) { $n = (int) $s[$code]; ?>
-    <a href="<?= h($qs(array('flag' => $f['flag'] === $code ? '' : $code))) ?>" class="notice-chip<?= $f['flag'] === $code ? ' on' : '' ?>">
+    <?php if ($full) { ?><a href="<?= h($qs(array('flag' => $f['flag'] === $code ? '' : $code))) ?>" class="notice-chip<?= $f['flag'] === $code ? ' on' : '' ?>"><?php } else { ?><span class="notice-chip"><?php } ?>
         <i class="fa <?= h($fl['icon']) ?>"></i> <?= h($fl['name']) ?> <b><?= $n ?></b>
-    </a>
+    <?= $full ? '</a>' : '</span>' ?>
     <?php } ?>
 </div>
 
-<?php $ssS = $s; $ssD = $this->staffDepts; $ssLink = true; include __DIR__ . '/_staff_summary.php'; ?>
+<?php $ssS = $s; $ssD = $this->staffDepts; $ssLink = $full; $ssShowFollow = true; $ssFollowCur = $f['follow']; include __DIR__ . '/_staff_summary.php'; ?>
+
+<?php if (!$full) { return; }   // ผู้บริหาร/ดูอย่างเดียว: จบที่ตัวเลขรวม — ไม่มีตัวกรอง รายชื่อ แหล่งข้อมูล ?>
 
 <form class="filter-bar" method="get" action="<?= URL ?>flood/staff" style="margin-bottom:12px">
     <input type="search" name="q" value="<?= h($f['q']) ?>" class="form-control grow" placeholder="ค้นหาชื่อ / เบอร์โทร / กลุ่มงาน / ตำแหน่ง / ที่พัก" />

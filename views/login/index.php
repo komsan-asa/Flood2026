@@ -3,7 +3,7 @@ $ov = isset($this->ov) ? $this->ov : array();
 $hc = !empty($ov['help']) ? $ov['help'] : null;
 $zc = !empty($ov['zones']) ? $ov['zones'] : null;
 $rc = !empty($ov['reports']) ? $ov['reports'] : null;
-$showLogin = !empty($this->notice);
+$showLogin = !empty($this->notice) || !empty($this->providerError);
 
 /** แถบแนวนอน: รายการ [name, c] เทียบกับค่ามากสุด */
 $bars = function ($rows, $colorFn = null) {
@@ -27,7 +27,8 @@ $bars = function ($rows, $colorFn = null) {
     <div class="ov-head">
         <h1 class="ov-title"><i class="fa fa-tachometer"></i> ภาพรวมสถานการณ์</h1>
         <p class="ov-sub"><?= h(TITLE_SYSTEM_NAME) ?></p>
-        <p class="ov-time"><i class="fa fa-clock-o"></i> ข้อมูล ณ <?= h($ov['updated_th'] ?? '') ?> น. · อัปเดตเองทุก 10 นาที</p>
+        <p class="ov-time"><i class="fa fa-clock-o"></i> ข้อมูล ณ <?= h($ov['updated_th'] ?? '') ?> น. · อัปเดตเองทุก 10 นาที
+            · <a href="<?= URL ?>index/about"><i class="fa fa-info-circle"></i> แนะนำระบบ</a></p>
         <button type="button" class="btn btn-lg btn-primary ov-login-btn" id="ovLoginBtn" aria-expanded="<?= $showLogin ? 'true' : 'false' ?>" aria-controls="ovLogin">
             <i class="fa fa-sign-in"></i> เข้าสู่ระบบเจ้าหน้าที่
         </button>
@@ -44,6 +45,17 @@ $bars = function ($rows, $colorFn = null) {
 
             <?php if (!empty($this->notice)) { ?>
             <div class="alert alert-warning"><?= h($this->notice) ?> กรุณาเข้าสู่ระบบใหม่</div>
+            <?php } ?>
+            <?php if (!empty($this->providerError)) { ?>
+            <div class="alert alert-danger"><?= h($this->providerError) ?></div>
+            <?php } ?>
+
+            <?php if (!empty($this->providerOn)) { ?>
+            <a class="btn btn-lg btn-block btn-provider" href="<?= URL ?>login/provider">
+                <i class="fa fa-id-card-o"></i> เข้าสู่ระบบด้วย Provider ID
+            </a>
+            <p class="provider-hint">ผ่าน Health ID / หมอพร้อม · บุคลากรนอก รพ.สมเด็จพระยุพราชสระแก้ว ใช้งานได้แบบดูอย่างเดียว</p>
+            <div class="login-or"><span>หรือใช้ชื่อผู้ใช้ของระบบ</span></div>
             <?php } ?>
 
             <div class="form-group login-field">
@@ -315,5 +327,5 @@ $bars = function ($rows, $colorFn = null) {
 
     <p class="ov-note"><i class="fa fa-lock"></i> รายละเอียดรายคน (ชื่อ เบอร์โทร ที่อยู่ พิกัดบ้าน) ดูได้เฉพาะเจ้าหน้าที่ที่เข้าสู่ระบบ ·
         <a href="#ovLogin" class="js-ov-login">เข้าสู่ระบบ</a></p>
-    <p class="ov-note"><a href="<?= URL ?>"><i class="fa fa-map-o"></i> แผนที่สถานการณ์น้ำ</a> · <a href="<?= URL ?>report">แจ้งจุดน้ำท่วม</a> · <a href="<?= URL ?>sos">ขอความช่วยเหลือ</a></p>
+    <p class="ov-note"><a href="<?= URL ?>"><i class="fa fa-map-o"></i> แผนที่สถานการณ์น้ำ</a> · <a href="<?= URL ?>report">แจ้งจุดน้ำท่วม</a> · <a href="<?= URL ?>sos">ขอความช่วยเหลือ</a> · <a href="<?= URL ?>index/about">แนะนำระบบ</a></p>
 </div>

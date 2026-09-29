@@ -1,5 +1,7 @@
 <?php
 
+require_once 'libs/ProviderId.php';
+
 class Login extends Controller {
 
     function __construct() {
@@ -15,6 +17,10 @@ class Login extends Controller {
             exit;
         }
         $this->view->notice = mb_substr(flood_in('m', '', $_GET), 0, 120);
+        $this->view->providerOn = ProviderId::enabled();
+        $err = Session::get('flood_login_error');
+        $this->view->providerError = is_string($err) ? $err : '';
+        Session::set('flood_login_error', null);
         $this->view->ov = $this->overview();
         $this->view->hosp = $this->hospital();
         $this->view->pageTitle = 'ภาพรวม · เข้าสู่ระบบเจ้าหน้าที่';
@@ -132,6 +138,57 @@ class Login extends Controller {
             flood_json(array('chk' => false, 'error_log' => 'ต้องส่งด้วยฟอร์ม'), 405);
         }
         $this->model->dataRun();
+    }
+
+    /* ==================== Provider ID (Health ID / หมอพร้อม) ==================== */
+
+    /** ขั้นที่ 1 — พาไปหน้า Health ID พร้อม state กัน CSRF */
+    function provider() {
+        if (!ProviderId::enabled()) {
+            $this->providerFail('ยังไม่ได้เปิดใช้งานการเข้าสู่ระบบด้วย Provider ID');
+        }
+        $state = bin2hex(random_bytes(16));
+        Session::set('flood_pid_state', $state);
+        header('Location: ' . ProviderId::authorizeUrl($state));
+        exit;
+    }
+
+    /** ขั้นที่ 2 — Health ID ส่ง code กลับมา (ต้องลงทะเบียน URL นี้เป็น redirect_uri) */
+    function providerCallback() {
+        if (!ProviderId::enabled()) {
+            $this->providerFail('ยังไม่ได้เปิดใช้งานการเข้าสู่ระบบด้วย Provider ID');
+        }
+        $code = isset($_GET['code']) ? (string) $_GET['code'] : '';
+        $state = isset($_GET['state']) ? (string) $_GET['state'] : '';
+        $saved = (string) Session::get('flood_pid_state');
+        Session::set('flood_pid_state', null);   // state ใช้ได้ครั้งเดียว
+        if ($state === '' || $saved === '' || !hash_equals($saved, $state)) {
+            $this->providerFail('state ไม่ถูกต้องหรือหมดอายุ กรุณาเริ่มเข้าสู่ระบบใหม่');
+        }
+        if ($code === '') {
+            $this->providerFail('ไม่ได้รับ code จาก Health ID' . (isset($_GET['error']) ? ' (' . mb_substr((string) $_GET['error'], 0, 80) . ')' : ''));
+        }
+        $p = ProviderId::exchange($code);
+        if (empty($p['ok'])) {
+            $this->providerFail($p['msg']);
+        }
+        $r = $this->model->providerLogin($p);
+        if (empty($r['ok'])) {
+            $this->providerFail($r['msg']);
+        }
+        header('Location: ' . $r['redirect']);
+        exit;
+    }
+
+    private function providerFail($msg) {
+        error_log('[Flood login] provider: ' . $msg);
+        try {
+            $this->model->logProviderFailed($msg);
+        } catch (Exception $e) {
+        }
+        Session::set('flood_login_error', $msg);
+        header('Location: ' . URL . 'login#login');
+        exit;
     }
 
     function logout() {

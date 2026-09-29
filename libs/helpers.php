@@ -160,6 +160,8 @@ function flood_menu_roles() {
         'teams' => array('officer'),
         'staff' => array('officer'),   // ข้อมูลบุคลากรโรงพยาบาล (ภายใน)
         'manpower' => array('officer'),   // อัตรากำลังพยาบาลรายเวร เทียบกรอบ ช/บ/ด
+        'staff_summary' => array('officer', 'viewer'),   // หน้าบุคลากรที่ได้รับผลกระทบแบบตัวเลขรวม (viewer ไม่เห็นรายชื่อ)
+        'manpower_summary' => array('officer', 'viewer'),   // หน้าอัตรากำลังรายเวรแบบดูอย่างเดียว (viewer ไม่เห็นรายชื่อผู้ลงเวลา/แก้ไม่ได้)
         'sat' => array('officer', 'viewer'),   // ห้องสถานการณ์ SAT ของโรงพยาบาล (viewer ดูอย่างเดียว)
         'hospital' => array('officer', 'viewer'),   // ภาพรวม (โรงพยาบาล) — ตัวเลขรวม ไม่มีรายชื่อ
         'settings' => array(),

@@ -1,5 +1,6 @@
 # ---- ห้ามขึ้น git: รหัสผ่าน / ข้อมูลประชาชน / ไฟล์สำรอง ----
 config/app.php
+config/provider_id.php
 config/*.bak*
 *.bak
 *.bak-*

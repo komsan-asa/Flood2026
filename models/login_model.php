@@ -141,6 +141,115 @@ class Login_Model extends Model {
         }
     }
 
+    /* ==================== Provider ID ==================== */
+
+    /** คอลัมน์ผูกบัญชีกับ Provider ID (เพิ่มเองครั้งแรก) */
+    private function ensureProviderColumns() {
+        $cols = array();
+        foreach ($this->db->select('SHOW COLUMNS FROM flood_user') as $c) {
+            $cols[$c['Field']] = true;
+        }
+        if (!isset($cols['auth_source'])) {
+            $this->db->exec("ALTER TABLE flood_user ADD COLUMN `auth_source` VARCHAR(20) NOT NULL DEFAULT 'local'
+                COMMENT 'local / hosoffice / provider'");
+        }
+        if (!isset($cols['provider_key'])) {
+            $this->db->exec("ALTER TABLE flood_user ADD COLUMN `provider_key` CHAR(64) DEFAULT NULL
+                COMMENT 'HMAC ของเลขบัตร (ไม่เก็บเลขบัตรจริง) — เข้าสู่ระบบด้วย Provider ID'");
+            $this->db->exec("ALTER TABLE flood_user ADD UNIQUE KEY `uk_flood_user_provider` (`provider_key`)");
+        }
+        if (!isset($cols['provider_hcodes'])) {
+            $this->db->exec("ALTER TABLE flood_user ADD COLUMN `provider_hcodes` VARCHAR(255) DEFAULT NULL
+                COMMENT 'hcode ที่สังกัดตาม Provider ID ครั้งล่าสุด'");
+        }
+    }
+
+    /**
+     * เข้าสู่ระบบด้วยข้อมูลจาก Provider ID ($p จาก ProviderId::exchange)
+     *   - ผูกบัญชีด้วย provider_key · ครั้งแรกสร้างบัญชีใหม่ สิทธิ์ ผู้บริหาร/ดูอย่างเดียว
+     *   - สังกัด รพ.แม่ข่าย (home_hcodes) → ใช้สิทธิ์ตามบัญชี (ผู้ดูแลปรับได้ในหน้า ผู้ใช้งาน)
+     *   - ไม่สังกัด → บังคับ viewer ทุกครั้ง (ทั้งในฐานข้อมูลและใน session)
+     * คืน array('ok'=>true,'redirect'=>...) หรือ array('ok'=>false,'msg'=>...)
+     */
+    public function providerLogin($p) {
+        try {
+            $this->ensureProviderColumns();
+        } catch (Exception $e) {
+            error_log('[Flood login] provider columns: ' . $e->getMessage());
+            return array('ok' => false, 'msg' => 'ฐานข้อมูลยังไม่พร้อมสำหรับ Provider ID (ต้องเพิ่มคอลัมน์ provider_key ใน flood_user)');
+        }
+        $hcodes = array();
+        $orgName = '';
+        foreach ($p['orgs'] as $o) {
+            $hcodes[] = $o['hcode'];
+            if ($orgName === '' && ProviderId::isHome(array($o['hcode']))) {
+                $orgName = $o['name'] !== '' ? $o['name'] : 'หน่วยบริการ ' . $o['hcode'];
+            }
+        }
+        if ($orgName === '' && $p['orgs']) {
+            $o = $p['orgs'][0];
+            $orgName = $o['name'] !== '' ? $o['name'] : 'หน่วยบริการ ' . $o['hcode'];
+        }
+        $home = ProviderId::isHome($hcodes);
+        $name = $p['name'] !== '' ? mb_substr($p['name'], 0, 150) : 'ผู้ใช้ Provider ID';
+        $now = date('Y-m-d H:i:s');
+
+        $row = $this->db->selectOne($this->loginSelectSql() . ' WHERE u.provider_key = :k LIMIT 1', array(':k' => $p['key']));
+        if ($row && (int) $row['is_active'] !== 1) {
+            Audit::loginEvent($this->db, 'failed', array('user_id' => $row['user_id'], 'loginname' => $row['loginname'],
+                'name' => $row['name'], 'role' => $row['role'], 'method' => 'provider', 'reason' => 'บัญชีถูกปิดใช้งาน'));
+            return array('ok' => false, 'msg' => 'บัญชีของท่านถูกปิดใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+        }
+        if (!$row) {
+            $login = 'pid_' . substr($p['key'], 0, 10);
+            $this->db->insert('flood_user', array(
+                'loginname' => $login,
+                'password_hash' => password_hash(bin2hex(random_bytes(24)), PASSWORD_DEFAULT),   // ไม่มีรหัสผ่านที่ใช้ได้
+                'name' => $name,
+                'role' => $home ? 'officer' : 'viewer',   // รพ.แม่ข่าย (home_hcodes เช่น 10699) = เจ้าหน้าที่ศูนย์
+                'org_name' => mb_substr($orgName, 0, 200) ?: null,
+                'must_change_password' => 0,
+                'is_active' => 1,
+                'auth_source' => 'provider',
+                'provider_key' => $p['key'],
+                'provider_hcodes' => mb_substr(implode(',', $hcodes), 0, 255) ?: null,
+                'created_at' => $now,
+            ));
+            $row = $this->db->selectOne($this->loginSelectSql() . ' WHERE u.provider_key = :k LIMIT 1', array(':k' => $p['key']));
+            if (!$row) {
+                return array('ok' => false, 'msg' => 'สร้างบัญชีไม่สำเร็จ กรุณาลองใหม่');
+            }
+        }
+        $upd = array('name' => $name, 'provider_hcodes' => mb_substr(implode(',', $hcodes), 0, 255) ?: null, 'updated_at' => $now);
+        if ($orgName !== '') {
+            $upd['org_name'] = mb_substr($orgName, 0, 200);
+        }
+        if (!$home && $row['role'] !== 'viewer') {
+            $upd['role'] = 'viewer';
+            $row['role'] = 'viewer';
+        } elseif ($home && flood_normalize_role($row['role']) === 'viewer') {
+            // บุคลากร รพ.แม่ข่าย ที่เคยถูกสร้างเป็น viewer → ยกเป็นเจ้าหน้าที่ศูนย์ (ไม่ลดสิทธิ์ผู้ดูแล/ทีมที่ตั้งไว้)
+            $upd['role'] = 'officer';
+            $row['role'] = 'officer';
+        }
+        try {
+            $this->db->update('flood_user', $upd, 'user_id = :w_id', array(':w_id' => (int) $row['user_id']));
+            $row['name'] = $name;
+            if ($orgName !== '') {
+                $row['org_name'] = mb_substr($orgName, 0, 200);
+            }
+        } catch (Exception $e) {
+            error_log('[Flood login] provider update: ' . $e->getMessage());
+        }
+        $row['must_change_password'] = 0;
+        $r = $this->establishSession($row, 'provider', array('role_lock' => $home ? '' : 'viewer', 'hcodes' => $hcodes));
+        return array('ok' => true, 'redirect' => $r['redirect']);
+    }
+
+    public function logProviderFailed($reason) {
+        Audit::loginEvent($this->db, 'failed', array('loginname' => 'provider', 'method' => 'provider', 'reason' => mb_substr($reason, 0, 250)));
+    }
+
     private function loginSelectSql() {
         return "SELECT u.user_id, u.loginname, u.password_hash, u.name, u.role, u.team_id, u.org_name,
                        u.phone, u.is_active, u.must_change_password, t.name AS team_name
@@ -148,7 +257,7 @@ class Login_Model extends Model {
                 LEFT JOIN flood_team t ON t.team_id = u.team_id";
     }
 
-    private function establishSession($row) {
+    private function establishSession($row, $method = 'password', $extra = array()) {
         Session::init();
         Session::regenerate();
         $now = date('Y-m-d H:i:s');
@@ -156,13 +265,21 @@ class Login_Model extends Model {
             'user_id' => (int) $row['user_id'],
             'loginname' => $row['loginname'],
             'name' => $row['name'],
-            'role' => flood_normalize_role($row['role']),
+            'role' => !empty($extra['role_lock']) ? $extra['role_lock'] : flood_normalize_role($row['role']),
             'team_id' => $row['team_id'] !== null ? (int) $row['team_id'] : null,
             'team_name' => $row['team_name'],
             'org_name' => $row['org_name'],
             'must_change_password' => (int) $row['must_change_password'],
             'login_at' => $now,
+            'auth_via' => $method,
         );
+        if (!empty($extra['role_lock'])) {
+            // ผู้ใช้ Provider ID นอก รพ.แม่ข่าย — ล็อกสิทธิ์ไว้ตลอด session แม้ผู้ดูแลจะแก้สิทธิ์ในฐานข้อมูล
+            $data['role_lock'] = $extra['role_lock'];
+        }
+        if (!empty($extra['hcodes'])) {
+            $data['hcodes'] = $extra['hcodes'];
+        }
         Session::set('User_FLOOD', $data);
         Session::set('flood_last_touch', null);
 
@@ -183,7 +300,7 @@ class Login_Model extends Model {
             'loginname' => $data['loginname'],
             'name' => $data['name'],
             'role' => $data['role'],
-            'method' => 'password',
+            'method' => $method,
         ));
 
         $next = 'flood';

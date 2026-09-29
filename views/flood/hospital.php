@@ -90,6 +90,43 @@ $canMp = flood_can_menu($role, 'manpower');
         <div class="kpi-label">หน่วยบริการ ปิด / ย้ายจุด</div>
         <div class="kpi-sub">🔴 <?= (int) $fac['red'] ?> · 🟠 <?= (int) $fac['orange'] ?> · 🟡 <?= (int) $fac['yellow'] ?> · ถึงรอบโทร <?= (int) $fac['overdue'] ?></div>
     </a>
+    <?php
+    // สาธารณูปโภค · Refer เข้า · กลุ่มเปราะบางในศูนย์พักพิง (ตัวเลขรวม — ดู Sat::utilityNow / referNow / shelterNow)
+    $ux = $this->sat['util']['items'];
+    $rf = $this->sat['refer'];
+    $shl = $this->sat['shelter'];
+    $kc = function ($s) {
+        return $s === 'red' || $s === 'orange' ? 'kpi-danger' : ($s === 'yellow' ? 'kpi-warn' : ($s === 'green' ? 'kpi-ok' : 'kpi-info'));
+    };
+    if ($ux) {
+        $uw = '';
+        foreach ($ux as $x) {
+            $uw = Sat_Model::worst($uw, $x['status']);
+        }
+        $o2 = isset($ux['util_o2']) ? $ux['util_o2'] : null;
+        $usub = array_filter(array($o2 ? $o2['sub'] : '', isset($ux['util_fuel']) ? 'น้ำมันสำรอง ' . $ux['util_fuel']['value'] : '',
+            isset($ux['util_water']) ? 'ถังพักน้ำ ' . $ux['util_water']['value'] : ''));
+    ?>
+    <a class="flood-kpi-card <?= $kc($uw) ?>" href="<?= URL ?>sat/utility">
+        <div class="kpi-value"><?= $o2 ? h($o2['value']) : '–' ?></div>
+        <div class="kpi-label">ออกซิเจนเหลวคงเหลือ · สาธารณูปโภค</div>
+        <div class="kpi-sub"><?= h(implode(' · ', $usub)) ?></div>
+    </a>
+    <?php } ?>
+    <?php if ($rf['ready']) { ?>
+    <a class="flood-kpi-card <?= $rf['today'] ? 'kpi-warn' : 'kpi-info' ?>" href="<?= URL ?>sat/refer">
+        <div class="kpi-value"><?= (int) $rf['total'] ?></div>
+        <div class="kpi-label">Refer เข้า รพ. ช่วงอุทกภัย</div>
+        <div class="kpi-sub">วันนี้ <?= (int) $rf['today'] ?> · เมื่อวาน <?= (int) $rf['yesterday'] ?> · on ET tube <?= (int) $rf['ett'] ?> · on O2 <?= (int) $rf['o2'] ?></div>
+    </a>
+    <?php } ?>
+    <?php if ($shl['ready']) { $ss = $shl['sum']; ?>
+    <a class="flood-kpi-card <?= $ss['bedridden'] + $ss['dialysis'] + $ss['pregnant'] ? 'kpi-warn' : 'kpi-info' ?>" href="<?= flood_can_menu($role, 'vulnerable') ? URL . 'flood/vulnerable' : '#' ?>">
+        <div class="kpi-value"><?= (int) $ss['bedridden'] ?></div>
+        <div class="kpi-label">ติดเตียงในศูนย์พักพิง</div>
+        <div class="kpi-sub"><?= (int) $ss['shelters'] ?> ศูนย์ · ผู้พักพิง <?= number_format($ss['people']) ?> · ตั้งครรภ์ <?= (int) $ss['pregnant'] ?> · ล้างไต <?= (int) $ss['dialysis'] ?> · <?= h(flood_thai_date($shl['date'], false)) ?></div>
+    </a>
+    <?php } ?>
     <?php } ?>
 </div>
 

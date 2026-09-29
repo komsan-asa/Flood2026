@@ -205,6 +205,18 @@ a.ss-row:hover { text-decoration: none; background: #f0f7fd; border-radius: 6px;
 .ss-n { text-align: right; }
 .ss-foot { margin-top: 8px; }
 .ss-table { margin-bottom: 4px; }
+/* สรุปการติดตาม (หน้า flood/staff) */
+.ss-follow { border-top: 1px solid #e3eaf2; }
+.ss-bar.ss-f-new { background: #b8430c; }
+.ss-bar.ss-f-contacted { background: #2b6cb0; }
+.ss-bar.ss-f-helping { background: #b7791f; }
+.ss-bar.ss-f-done { background: #2f855a; }
+.ss-bar.ss-f-no_need { background: #8a94a3; }
+.ss-fi-new { color: #b8430c; } .ss-fi-contacted { color: #2b6cb0; } .ss-fi-helping { color: #b7791f; } .ss-fi-done { color: #2f855a; } .ss-fi-no_need { color: #8a94a3; }
+.ss-follow .ss-label .fa { width: 14px; text-align: center; }
+.ss-follow .ss-row.is-on, .ss-ftable tr.is-on > td { background: #e6f0fb; }
+.ss-follow .ss-row.is-on { border-radius: 6px; font-weight: 600; }
+.ss-ftable tfoot th { border-top: 2px solid #d5dee8; }
 
 /* เมนูข้าง: แยกสีพื้นกลุ่ม "โรงพยาบาล" (เขียวอมฟ้า) กับ "สถานการณ์ภายนอก" (ฟ้า) — 28 ก.ย. 69 */
 .flood-nav-group { border-radius: 10px; padding: 0 4px 4px; margin: 4px 0 10px; }
@@ -224,3 +236,25 @@ a.ss-row:hover { text-decoration: none; background: #f0f7fd; border-radius: 6px;
 .flood-nav-group.g-public { background: rgba(251, 191, 36, .12); box-shadow: inset 0 0 0 1px rgba(252, 211, 77, .25); }
 .flood-nav-group.g-public > .flood-nav-divider { color: #fde68a; }
 .flood-nav-group.g-public > .flood-nav-divider::before, .flood-nav-group.g-public > .flood-nav-divider::after { border-top-color: rgba(253, 230, 138, .35); }
+
+/* ทะเบียนกลุ่มเปราะบาง: ชีตรายชื่อ (views/flood/vulnerable.php, vulnerable_form.php) */
+.vsrc-card .flood-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.vsrc-cols { margin-top: 4px; font-size: 12px; }
+.vsrc-cols summary { cursor: pointer; color: #5b7896; }
+.vsrc-cols ul { margin: 4px 0 0; padding-left: 18px; }
+.vsrc-raw > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.vsrc-raw > summary::-webkit-details-marker { display: none; }
+/* กลุ่มเปราะบางในศูนย์พักพิง (รายงานรายศูนย์) — views/flood/vulnerable.php */
+.sh-card .flood-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sh-date select { min-width: 170px; }
+.sh-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.sh-sum > div { background: #f5f8fb; border: 1px solid #e3e9ef; border-radius: 8px; padding: 8px 10px; }
+.sh-sum > div b { display: block; font-size: 22px; line-height: 1.2; color: #18212d; }
+.sh-sum > div span { font-size: 12px; color: #5b6b7c; }
+.sh-sum > div.is-hot { background: #fff4ea; border-color: #f3c7a3; }
+.sh-sum > div.is-hot b { color: #9a3412; }
+.sh-table tr.sh-hot > td { background: #fff8f1; }
+.sh-contact { font-size: 12px; min-width: 200px; }
+.sh-raw { margin-top: 4px; font-size: 12px; }
+.sh-raw summary { cursor: pointer; color: #5b7896; }
+.sh-raw th { width: 45%; font-weight: 500; color: #5b7896; }

@@ -18,6 +18,19 @@ $selGroups = $p ? flood_codes_filter($p['vuln_groups'], $groups) : array();
     · สถานะตอนนี้: <?= flood_status_label($evac, $p['evac_status']) ?></div>
 <?php } ?>
 
+<?php if ($p && !empty($p['src_raw'])) { $srcRaw = json_decode($p['src_raw'], true); if ($srcRaw) { ?>
+<details class="flood-card vsrc-raw">
+    <summary class="flood-card-header"><span><i class="fa fa-table"></i> ข้อมูลจาก Google Sheet<?= !empty($this->vSource) ? ' — ' . h($this->vSource['name']) : '' ?></span>
+        <span class="small-muted">ดึงล่าสุด <?= h($p['src_synced_at'] ? flood_thai_date($p['src_synced_at']) : '-') ?></span></summary>
+    <div class="flood-card-body">
+        <table class="table table-condensed" style="margin:0">
+            <?php foreach ($srcRaw as $hd => $val) { ?><tr><th style="width:35%"><?= h($hd) ?></th><td><?= nl2br(h($val)) ?></td></tr><?php } ?>
+        </table>
+        <div class="small-muted" style="margin-top:6px">ดึงชีตรอบถัดไป ระบบปรับชื่อ HN ที่อยู่ เบอร์ ผู้ดูแล และความต้องการทางการแพทย์ตามชีต (ถ้าชีตมีค่า) · สถานะอพยพ บันทึก และพิกัดที่ปักไว้ไม่ถูกทับ</div>
+    </div>
+</details>
+<?php } } ?>
+
 <form id="vForm" autocomplete="off">
     <input type="hidden" name="person_id" value="<?= $p ? (int) $p['person_id'] : 0 ?>" />
     <input type="hidden" name="lat" id="vLat" value="<?= h($v('lat')) ?>" />

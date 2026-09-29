@@ -105,8 +105,10 @@ class Flood extends Controller {
             }
             // ผู้ดูแลเปลี่ยนสิทธิ์/ทีม — มีผลทันทีโดยไม่ต้องล็อกอินใหม่
             $newTeam = $st['team_id'] !== null ? (int) $st['team_id'] : null;
-            if ($st['role'] !== $u['role'] || $newTeam !== (isset($u['team_id']) ? $u['team_id'] : null) || $st['name'] !== $u['name']) {
-                $u['role'] = flood_normalize_role($st['role']);
+            // ผู้ใช้ Provider ID นอก รพ.แม่ข่าย ล็อกสิทธิ์ไว้ (role_lock) — สิทธิ์ในฐานข้อมูลไม่มีผล
+            $newRole = !empty($u['role_lock']) ? $u['role_lock'] : flood_normalize_role($st['role']);
+            if ($newRole !== $u['role'] || $newTeam !== (isset($u['team_id']) ? $u['team_id'] : null) || $st['name'] !== $u['name']) {
+                $u['role'] = $newRole;
                 $u['team_id'] = $newTeam;
                 $u['team_name'] = $st['team_name'];
                 $u['name'] = $st['name'];
@@ -1210,17 +1212,21 @@ class Flood extends Controller {
 
     /** รายชื่อบุคลากรที่ตอบแบบสำรวจ (รวม 3 ฟอร์ม) — เฉพาะเจ้าหน้าที่ศูนย์/ผู้ดูแลระบบ */
     function staff() {
-        $this->requireMenu('staff');
+        $this->requireMenu('staff_summary');
+        $full = $this->can('staff');   // false = ผู้บริหาร (viewer): ตัวเลขรวมเท่านั้น ไม่มีรายชื่อ/นำเข้า
         $sm = $this->staffModel();
         $ready = $sm->ensureTables();
         $f = $this->staffFilters();
-        $this->view->js[] = 'flood/js/staff.js';
+        if ($full) {
+            $this->view->js[] = 'flood/js/staff.js';
+        }
+        $this->view->staffFull = $full;
         $this->view->staffReady = $ready;
         $this->view->staffFilters = $f;
-        $this->view->staffResult = $ready ? $sm->listStaff($f, $this->pageParam()) : array('rows' => array(), 'total' => 0, 'page' => 1, 'pages' => 1);
+        $this->view->staffResult = ($ready && $full) ? $sm->listStaff($f, $this->pageParam()) : array('rows' => array(), 'total' => 0, 'page' => 1, 'pages' => 1);
         $this->view->staffSummary = $ready ? $sm->summary() : array();
         $this->view->staffDepts = $ready ? $sm->departments() : array();
-        $this->view->staffSources = $ready ? $sm->sources() : array();
+        $this->view->staffSources = ($ready && $full) ? $sm->sources() : array();
         $this->view->staffIsAdmin = $this->isAdmin();
         $this->view->autoRefresh = false;   // กำลังนำเข้าหลายฟอร์ม — ไม่ให้หน้ารีเฟรชตัดกลางทาง
         $this->view->activeTab = 'staff';
@@ -1696,6 +1702,27 @@ class Flood extends Controller {
             'no_location' => flood_in('no_location', '', $_GET) === '1',
         );
         $this->useMap();
+        // นำเข้าจาก Google Sheet (แบบหน้าบุคลากร) — ตาราง/คอลัมน์สร้างเองครั้งแรก
+        $vi = $this->vulnImportModel();
+        $this->view->vImportReady = $vi->ensureTables();
+        $this->view->vSources = $this->view->vImportReady ? $vi->sources() : array();
+        $this->view->vIsAdmin = $this->isAdmin();
+        // รายงานศูนย์พักพิง (ตัวเลขรายศูนย์รายวัน จากชีตประเภท shelter)
+        $this->view->shDates = $this->view->vImportReady ? $vi->shelterDates() : array();
+        $this->view->shDate = null;
+        $this->view->shReport = null;
+        if ($this->view->shDates) {
+            $want = (string) flood_in('sdate', '', $_GET);
+            $date = $this->view->shDates[0]['report_date'];
+            foreach ($this->view->shDates as $d) {
+                if ($d['report_date'] === $want) {
+                    $date = $want;
+                }
+            }
+            $this->view->shDate = $date;
+            $this->view->shReport = $vi->shelterReport($date);
+        }
+        $this->view->js[] = 'flood/js/sheet_pull.js';
         $this->view->js[] = 'flood/js/vulnerable.js';
         $this->view->vFilters = $filters;
         $this->view->vResult = $this->model->listVulnerable($filters, 50, $this->pageParam());
@@ -1723,6 +1750,14 @@ class Flood extends Controller {
         $this->useMap();
         $this->view->js[] = 'flood/js/vulnerable_form.js';
         $this->view->person = $person;
+        $this->view->vSource = null;   // แหล่งชีตที่นำเข้าคนนี้มา (ถ้ามี)
+        if ($person && !empty($person['src_id'])) {
+            try {
+                $this->view->vSource = $this->vulnImportModel()->getSource((int) $person['src_id']);
+            } catch (Exception $e) {
+                $this->view->vSource = null;
+            }
+        }
         $this->view->activeZones = array_map(array($this->model, 'zoneForMap'), $this->model->listZones(array('status' => 'active')));
         $this->view->amphoes = $this->model->getAmphoes();
         $this->view->provinces = $this->model->getProvinces();
@@ -1861,6 +1896,110 @@ class Flood extends Controller {
             'evac_place' => (string) $p['evac_place'],
             'logs' => $logs,
         )));
+    }
+
+    private function vulnImportModel() {
+        require_once 'models/vulnerable_import_model.php';
+        return new Vulnerable_Import_Model();
+    }
+
+    /** นำเข้ารายชื่อกลุ่มเปราะบางจากชีต (CSV จากปุ่ม "ดึง" ที่เบราว์เซอร์อ่านชีตให้ หรือไฟล์ที่อัปโหลด) */
+    function vulnUpload() {
+        $this->requireMenu('vulnerable', true);
+        $vi = $this->vulnImportModel();
+        $src = $vi->ensureTables() ? $vi->getSource((int) flood_in('source_id', 0, $_POST)) : null;
+        if (!$src) {
+            flood_json(array('chk' => false, 'msg' => 'กรุณาเลือกแหล่งข้อมูล'));
+        }
+        if (empty($_FILES['csv']) || $_FILES['csv']['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES['csv']['tmp_name'])) {
+            flood_json(array('chk' => false, 'msg' => 'กรุณาเลือกไฟล์ .csv'));
+        }
+        if ($_FILES['csv']['size'] > Vulnerable_Import_Model::MAX_BYTES) {
+            flood_json(array('chk' => false, 'msg' => 'ไฟล์ใหญ่เกิน 8 MB'));
+        }
+        $raw = file_get_contents($_FILES['csv']['tmp_name']);
+        if (substr($raw, 0, 2) === 'PK') {
+            flood_json(array('chk' => false, 'msg' => 'ไฟล์นี้เป็น Excel (.xlsx) — ใน Google Sheet เลือก ไฟล์ → ดาวน์โหลด → ค่าที่คั่นด้วยจุลภาค (.csv)'));
+        }
+        @set_time_limit(180);
+        // รายงานศูนย์พักพิง: แท็บรายวัน 1 แถว = 1 ศูนย์ → เก็บเป็นตัวเลขรายศูนย์ (ไม่ใช่รายชื่อคน)
+        if (flood_in('mode', '', $_POST) === 'shelter_day' || $src['kind'] === 'shelter') {
+            $expect = (string) flood_in('date', '', $_POST);
+            $expect = preg_match('/^\d{4}-\d{2}-\d{2}$/', $expect) ? $expect : null;
+            $tab = mb_substr(trim((string) flood_in('tab', '', $_POST)), 0, 100);
+            Audit::suspend();
+            try {
+                $r = $vi->importShelterDay((int) $src['source_id'], $raw, $expect, $tab !== '' ? $tab : null);
+            } catch (Exception $e) {
+                Audit::resume();
+                if ($expect === null) {
+                    $vi->markSyncError((int) $src['source_id'], $e->getMessage());
+                }
+                flood_json(array('chk' => false, 'msg' => ($tab !== '' ? $tab : $src['name']) . ': ' . $e->getMessage()));
+            }
+            Audit::resume();
+            if ($r['skipped']) {
+                flood_json(array('chk' => true, 'skipped' => true, 'msg' => 'ไม่พบแท็บวันที่ ' . flood_thai_date($expect, false)));
+            }
+            flood_json(array('chk' => true, 'date' => $r['date'], 'msg' => ($tab !== '' ? $tab : flood_thai_date($r['date'], false))
+                . ': ศูนย์พักพิง ' . $r['shelters'] . ' แห่ง · ผู้พักพิง ' . number_format($r['people']) . ' คน'));
+        }
+        Audit::suspend();
+        try {
+            $r = $vi->importCsv((int) $src['source_id'], $raw, (int) $this->user()['user_id']);
+        } catch (Exception $e) {
+            Audit::resume();
+            if (Vulnerable_Import_Model::looksLikeShelter($raw)) {
+                // ชีตรายงานตัวเลขรายศูนย์พักพิง (เช่น รายงาน สสอ.) — เปลี่ยนประเภทแล้วให้เบราว์เซอร์ดึงแท็บรายวันต่อ
+                $vi->setKind((int) $src['source_id'], 'shelter');
+                flood_json(array('chk' => true, 'shelter' => true,
+                    'msg' => $src['name'] . ': เป็นรายงานศูนย์พักพิง (ไม่มีรายชื่อคน) — ดึงตัวเลขรายศูนย์จากแท็บรายวันแทน'));
+            }
+            $vi->markSyncError((int) $src['source_id'], $e->getMessage());
+            flood_json(array('chk' => false, 'msg' => $src['name'] . ': ' . $e->getMessage()));
+        }
+        Audit::resume();
+        $msg = $src['name'] . ': เพิ่มใหม่ ' . $r['new'] . ' · ปรับปรุง ' . $r['updated'] . ' · ไม่เปลี่ยน ' . $r['same'];
+        if ($r['linked']) {
+            $msg .= ' · เชื่อมกับรายชื่อเดิม ' . $r['linked'];
+        }
+        if ($r['skipped']) {
+            $msg .= ' · ข้าม (ไม่มีชื่อ) ' . $r['skipped'];
+        }
+        if ($r['dup_in_sheet']) {
+            $msg .= ' · ซ้ำในชีต ' . $r['dup_in_sheet'];
+        }
+        if ($r['removed']) {
+            $msg .= ' · เคยนำออกจากทะเบียนแล้ว (ไม่เพิ่มกลับ) ' . $r['removed'];
+        }
+        if ($r['no_area']) {
+            $msg .= ' · หาอำเภอ/ตำบลไม่เจอ ' . $r['no_area'];
+        }
+        if ($r['not_in_sheet']) {
+            $msg .= ' · ไม่อยู่ในชีตรอบนี้ ' . $r['not_in_sheet'] . ' คน (ยังอยู่ในทะเบียน)';
+        }
+        flood_json(array('chk' => true, 'msg' => $msg, 'result' => $r));
+    }
+
+    /** เพิ่ม/แก้/เปิด-ปิดแหล่งข้อมูลรายชื่อกลุ่มเปราะบาง — เฉพาะผู้ดูแลระบบ */
+    function vulnSource() {
+        $this->requireAdmin(true);
+        $vi = $this->vulnImportModel();
+        if (!$vi->ensureTables()) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตาราง flood_vuln_source — ให้ผู้ดูแลรัน php sql/apply_schema.php 20'));
+        }
+        $id = (int) flood_in('source_id', 0, $_POST);
+        if (flood_in('act', 'save', $_POST) === 'toggle') {
+            $src = $vi->getSource($id);
+            if (!$src) {
+                flood_json(array('chk' => false, 'msg' => 'ไม่พบแหล่งข้อมูล'));
+            }
+            $vi->setSourceActive($id, !(int) $src['is_active']);
+            flood_json(array('chk' => true, 'msg' => (int) $src['is_active'] ? 'ปิดการดึงข้อมูลแหล่งนี้แล้ว' : 'เปิดใช้แหล่งนี้แล้ว'));
+        }
+        $r = $vi->saveSource($id, flood_in('name', '', $_POST), flood_in('sheet_url', '', $_POST),
+            isset($_POST['default_groups']) ? (array) $_POST['default_groups'] : array(), flood_in('kind', 'persons', $_POST));
+        flood_json(is_string($r) ? array('chk' => false, 'msg' => $r) : array('chk' => true, 'msg' => 'บันทึกแหล่งข้อมูลแล้ว', 'source_id' => $r));
     }
 
     /* ==================== ทีมช่วยเหลือ ==================== */

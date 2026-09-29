@@ -793,7 +793,31 @@ class Staff_Model extends Model {
         foreach ($s as $k => $v) {
             $s[$k] = (int) $v;
         }
+        $s['follow'] = $this->followSummary();
         return $s;
+    }
+
+    /**
+     * สรุปการติดตาม: จำนวนคนต่อสถานะ แยกระดับ รุนแรง / ปานกลาง / อื่น ๆ (ไม่มีรายชื่อ)
+     * คืน array(สถานะ => array(severe, moderate, other, affected, total)) ตามลำดับ flood_staff_follow_options()
+     */
+    public function followSummary() {
+        $out = array();
+        foreach (array_keys(flood_staff_follow_options()) as $code) {
+            $out[$code] = array('severe' => 0, 'moderate' => 0, 'other' => 0, 'affected' => 0, 'total' => 0);
+        }
+        $rows = $this->db->select("SELECT follow_status, level, COUNT(*) AS n FROM flood_staff GROUP BY follow_status, level");
+        foreach ($rows as $r) {
+            $code = isset($out[$r['follow_status']]) ? $r['follow_status'] : 'new';
+            $n = (int) $r['n'];
+            $lv = in_array($r['level'], array('severe', 'moderate'), true) ? $r['level'] : 'other';
+            $out[$code][$lv] += $n;
+            $out[$code]['total'] += $n;
+            if ($lv !== 'other') {
+                $out[$code]['affected'] += $n;
+            }
+        }
+        return $out;
     }
 
     /** กลุ่มงาน + จำนวน (ผู้ได้รับผลกระทบก่อน) */

@@ -13,7 +13,7 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
         <button type="button" class="flood-menu-close" id="floodMenuClose" aria-label="ปิดเมนู"><i class="fa fa-times"></i></button>
     </div>
     <nav class="flood-sidebar-nav">
-        <?php if (flood_can_menu($role, 'hospital') || flood_can_menu($role, 'sat') || flood_can_menu($role, 'staff') || flood_can_menu($role, 'manpower')) { ?>
+        <?php if (flood_can_menu($role, 'hospital') || flood_can_menu($role, 'sat') || flood_can_menu($role, 'staff_summary') || flood_can_menu($role, 'manpower_summary') || flood_can_menu($role, 'vulnerable')) { ?>
         <div class="flood-nav-group g-hosp">
         <div class="flood-nav-section flood-nav-divider"><span>โรงพยาบาล</span></div>
         <?php if (flood_can_menu($role, 'hospital')) { ?>
@@ -26,22 +26,39 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
             <i class="fa fa-crosshairs"></i><span>ห้องสถานการณ์ SAT</span>
         </a>
         <?php } ?>
-        <?php if (flood_can_menu($role, 'staff')) { ?>
+        <?php if (flood_can_menu($role, 'sat')) { ?>
+        <a href="<?= URL ?>sat/utility" class="flood-nav-item<?= $activeTab === 'utility' ? ' active' : '' ?>">
+            <i class="fa fa-tint"></i><span>สาธารณูปโภค</span>
+        </a>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'sat')) { ?>
+        <a href="<?= URL ?>sat/refer" class="flood-nav-item<?= $activeTab === 'refer' ? ' active' : '' ?>">
+            <i class="fa fa-ambulance"></i><span>Refer ช่วงอุทกภัย</span>
+        </a>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'staff_summary')) { ?>
         <a href="<?= URL ?>flood/staff" class="flood-nav-item<?= $activeTab === 'staff' ? ' active' : '' ?>">
             <i class="fa fa-user-md"></i><span>บุคลากรที่ได้รับผลกระทบ</span>
         </a>
+        <?php } ?>
+        <?php if (flood_can_menu($role, 'staff')) { ?>
         <a href="<?= URL ?>staffreport/admin" class="flood-nav-item<?= $activeTab === 'staffForm' ? ' active' : '' ?>">
             <i class="fa fa-wpforms"></i><span>ฟอร์มบุคลากรแจ้ง</span>
         </a>
         <?php } ?>
-        <?php if (flood_can_menu($role, 'manpower')) { ?>
+        <?php if (flood_can_menu($role, 'manpower_summary')) { ?>
         <a href="<?= URL ?>flood/manpower" class="flood-nav-item<?= $activeTab === 'manpower' ? ' active' : '' ?>">
             <i class="fa fa-id-badge"></i><span>อัตรากำลังรายเวร</span>
         </a>
         <?php } ?>
+        <?php if (flood_can_menu($role, 'vulnerable')) { ?>
+        <a href="<?= URL ?>flood/vulnerable" class="flood-nav-item<?= $activeTab === 'vulnerable' ? ' active' : '' ?>">
+            <i class="fa fa-wheelchair"></i><span>กลุ่มเปราะบาง</span>
+        </a>
+        <?php } ?>
         </div>
         <?php } ?>
-        <?php if (flood_can_menu($role, 'stats') || flood_can_menu($role, 'zones') || flood_can_menu($role, 'reports') || flood_can_menu($role, 'help') || flood_can_menu($role, 'vulnerable') || flood_can_menu($role, 'teams')) { ?>
+        <?php if (flood_can_menu($role, 'stats') || flood_can_menu($role, 'zones') || flood_can_menu($role, 'reports') || flood_can_menu($role, 'help') || flood_can_menu($role, 'teams')) { ?>
         <?php $navExtOpen = true; ?>
         <div class="flood-nav-group g-ext">
         <div class="flood-nav-section flood-nav-divider"><span>สถานการณ์ภายนอก</span></div>
@@ -69,11 +86,6 @@ $settingsTabs = array('settingsUsers', 'zoneLevels', 'onlineUsers', 'loginLog', 
         <a href="<?= URL ?>flood/help" class="flood-nav-item<?= $activeTab === 'help' ? ' active' : '' ?>">
             <i class="fa fa-life-ring"></i><span><?= $role === 'team' ? 'ใบงานของทีม' : 'ขอความช่วยเหลือ' ?></span>
             <span class="nav-count hidden" data-count="help"></span>
-        </a>
-        <?php } ?>
-        <?php if (flood_can_menu($role, 'vulnerable')) { ?>
-        <a href="<?= URL ?>flood/vulnerable" class="flood-nav-item<?= $activeTab === 'vulnerable' ? ' active' : '' ?>">
-            <i class="fa fa-wheelchair"></i><span>กลุ่มเปราะบาง</span>
         </a>
         <?php } ?>
         <?php if (flood_can_menu($role, 'teams')) { ?>

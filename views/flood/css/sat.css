@@ -165,3 +165,71 @@
 .sat-reps li { padding: 3px 0; border-bottom: 1px dashed #eef2f6; }
 .sat-reps .btn-link { padding: 0 4px 0 0; font-weight: 700; }
 .sat-pre { white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 14px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; margin: 0; }
+
+/* ข้อมูลจากหน้าอื่นของโรงพยาบาล (สาธารณูปโภค · Refer · ศูนย์พักพิง) — 29 ก.ย. 69 */
+.sat-util { flex-wrap: wrap; }
+.sat-util-auto { flex: 1 1 100%; font-size: 12px; color: #1e40af; line-height: 1.5; }
+.sat-util-auto .fa-database { font-size: 11px; opacity: .7; }
+.sat-util-auto .sat-chip { font-size: 11px; padding: 0 6px; }
+.sat-util-link { font-size: 12px; font-weight: 400; white-space: nowrap; }
+.sat-util-sync { margin-top: 8px; white-space: normal; text-align: left; }
+.sat-auto-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 10px; margin: 8px 0; font-size: 13px; }
+.sat-auto-text { white-space: pre-line; color: #1e3a8a; margin: 4px 0 6px; }
+
+/* ดึงประมวล — รวบรวมข้อมูลย่อยของตัวชี้วัดลงประวัติ (sat_compile.js) — 29 ก.ย. 69 */
+.sat-pull-group { position: relative; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.sat-pull-menu { max-height: 72vh; overflow-y: auto; min-width: 290px; padding: 6px 0; list-style: none; }
+.sat-pull-menu > li > a { display: block; white-space: normal; padding: 5px 16px 5px 26px; color: #1e293b; line-height: 1.45; text-decoration: none; }
+.sat-pull-menu > li:first-child > a, .sat-pull-menu > li:nth-child(2) > a { padding-left: 16px; }
+.sat-pull-menu > li > a:hover, .sat-pull-menu > li > a:focus { background: #eff6ff; color: #1d4ed8; }
+.sat-pull-menu .dropdown-header { font-size: 12px; font-weight: 700; color: #64748b; padding: 6px 16px 2px; }
+.sat-pull-menu .divider { height: 1px; margin: 6px 0; overflow: hidden; background: #e2e8f0; }
+.sat-pull-menu small { color: #64748b; }
+.sat-src-auto { display: inline-block; font-size: 11px; font-weight: 600; line-height: 1.45; padding: 0 7px; border-radius: 9px;
+    background: #e0f2fe; color: #075985; border: 1px solid #bae6fd; white-space: nowrap; }
+.sat-pull-h { font-weight: 700; margin: 2px 0 8px; }
+.sat-pull-h small { font-weight: 400; color: #64748b; margin-left: 6px; }
+.sat-pull-src { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+.sat-pull-list { list-style: none; margin: 0 0 6px; padding: 0; }
+.sat-pull-list li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 3px 0; }
+.sat-pull-list input { margin: 0; }
+.sat-pull-list label { font-weight: 500; margin: 0; flex: 1 1 260px; min-width: 0; }
+.sat-pull-st { font-size: 12.5px; color: #64748b; flex: 1 1 100%; padding-left: 21px; }
+.sat-pull-st:empty { display: none; }
+.sat-pull-st.is-ok { color: #15803d; }
+.sat-pull-st.is-err { color: #b91c1c; }
+.sat-pull-st.is-run { color: #0369a1; }
+.sat-pull-rerun { margin-top: 6px; }
+.sat-pull-row { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: #fff; }
+.sat-pull-row.is-off { background: #f8fafc; }
+.sat-pull-row.is-off textarea, .sat-pull-row.is-off .sat-pull-colors { opacity: .55; }
+.sat-pull-row-h { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.sat-pull-row-h label { margin: 0; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.sat-pull-row-h label input { margin: 0; }
+.sat-pull-cur { font-size: 12px; color: #64748b; }
+.sat-pull-cur .sat-chip { font-size: 11px; padding: 0 6px; }
+.sat-pull-colors { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.sat-pull-c { border: 2px solid transparent; border-radius: 8px; padding: 2px 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; opacity: .6; }
+.sat-pull-c:hover, .sat-pull-c:focus { opacity: 1; }
+.sat-pull-c.is-on { opacity: 1; box-shadow: 0 0 0 2px rgba(15, 23, 42, .6); }
+.sat-pull-row textarea { margin-top: 8px; font-size: 13px; line-height: 1.5; }
+.sat-pull-meta { font-size: 12px; color: #5b6573; margin-top: 5px; line-height: 1.5; }
+.sat-pull-meta .sat-chip { font-size: 11px; padding: 0 6px; }
+.sat-pull-count { float: left; line-height: 34px; color: #64748b; }
+.sat-card-note.is-auto { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6; overflow: hidden; font-size: 12.5px; }
+@media (max-width: 600px) {
+    .sat-pull-colors { margin-left: 0; }
+    .sat-pull-group { margin: 0 0 6px; }
+}
+
+/* ④ การติดตามบุคลากรที่ได้รับผลกระทบ (จากหน้า flood/staff) */
+.sat-follow { margin-top: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 10px; font-size: 13.5px; }
+.sat-follow-bar { display: flex; height: 10px; margin: 6px 0; border-radius: 5px; overflow: hidden; background: #e5e9ef; }
+.sat-follow-bar span { display: block; height: 100%; }
+.sat-fb-new { background: #b8430c; } .sat-fb-contacted { background: #2b6cb0; } .sat-fb-helping { background: #b7791f; }
+.sat-fb-done { background: #2f855a; } .sat-fb-no_need { background: #8a94a3; }
+.sat-follow-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sat-fchip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border: 1px solid #d5dee8; border-radius: 999px; background: #fff; color: #243142; font-size: 12.5px; text-decoration: none; }
+.sat-fchip:hover { text-decoration: none; border-color: #2b6cb0; }
+.sat-fchip.is-zero { color: #8a94a3; }
+.sat-fdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }

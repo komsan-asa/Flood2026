@@ -88,14 +88,20 @@ class Index extends Controller {
         } catch (Exception $e) {
             error_log('[flood] about visit: ' . $e->getMessage());
         }
+        $st['sat_items'] = 14;
+        try {
+            require_once 'models/sat_model.php';
+            $st['sat_items'] = count(Sat_Model::items());
+        } catch (Throwable $e) {
+            error_log('[flood] about SAT items: ' . $e->getMessage());
+        }
         $this->view->aboutStats = $st;
         $this->view->useMap = false;
-        $this->view->css = array('index/css/about.css');
+        // อินโฟกราฟิกแบบหน้า coc/index/about — หน้าเดี่ยว CSS อยู่ใน view (ไม่ผ่าน header/footer ของแอป)
+        $this->view->css = array();
         $this->view->js = array();
-        $this->view->noNavbar = true;
-        $this->view->bodyClass = 'sk-about-body';
         $this->view->pageTitle = 'แนะนำระบบ';
-        $this->view->rander('index/about');
+        $this->view->rander('index/about', true);
     }
 
     /** สถานการณ์อุทกภัยทั่วประเทศรายวัน (สาธารณะ) — ตั้งแต่ 22 ก.ย. 2569 · ?d=YYYY-MM-DD เลือกวันของตารางรายจังหวัด */

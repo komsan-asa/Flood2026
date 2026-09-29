@@ -1,0 +1,126 @@
+/* SitRep แบบตาราง — หน้าต่าง "SitRep ฉบับที่ …" (views/flood/js/sat_sitrep_view.js)
+   + ลิงก์ประวัติในกล่องสถานะโรงพยาบาล + ข้อความแนะนำในหน้าต่างยืนยันหน้างาน */
+.sat-overall-hist { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(15, 23, 42, .15); }
+.sat-overall-hist .btn-link, .sat-link { padding: 0; font-weight: 600; vertical-align: baseline; font-size: inherit; }
+.sat-overall-hist .btn-link { font-size: 13px; }
+.sat-overall-hist .btn-link[disabled] { color: #94a3b8; }
+.sat-rep-hist td, .sat-rep-hist th { vertical-align: middle !important; }
+.sat-suggest { margin: -4px 0 10px; color: #1d4ed8; }
+.sat-suggest:empty { display: none; }
+.srv { font-size: 14px; line-height: 1.55; color: #1f2937; }
+.srv-muted { color: #94a3b8; }
+.srv-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px 0 8px; }
+.srv-meta { color: #5b6573; font-size: 13px; }
+.srv-tools .btn-link { padding: 0; white-space: nowrap; }
+.srv.is-raw > :not(.srv-tools):not(.srv-raw) { display: none; }
+
+/* หน้าต่างกว้างขึ้นตอนแสดงตาราง (ปกติ modal-lg กว้าง 48rem) */
+#satViewModal.srv-wide .modal-dialog { max-width: 66rem; }
+
+/* สี */
+.srv-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px;
+    border: 1px solid rgba(0, 0, 0, .15); background: #cbd5e1; flex: 0 0 auto; font-style: normal; }
+.srv-dot.srv-c-green { background: #16a34a; }
+.srv-dot.srv-c-yellow { background: #eab308; }
+.srv-dot.srv-c-orange { background: #ea580c; }
+.srv-dot.srv-c-red { background: #dc2626; }
+.srv-main .srv-dot, .srv-sub .srv-dot, .srv-reason .srv-dot, .srv-kv .srv-dot, .srv-rec .srv-dot { width: 9px; height: 9px; margin: 0 2px 0 1px; }
+.srv-list .srv-dot { margin-right: 6px; }
+.srv-chip { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; border: 1px solid #cbd5e1;
+    background: #f1f5f9; color: #475569; font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.srv-chip.srv-c-green { background: #dcfce7; color: #166534; border-color: #86efac; }
+.srv-chip.srv-c-yellow { background: #fef9c3; color: #854d0e; border-color: #facc15; }
+.srv-chip.srv-c-orange { background: #ffedd5; color: #9a3412; border-color: #fb923c; }
+.srv-chip.srv-c-red { background: #fee2e2; color: #991b1b; border-color: #f87171; }
+
+/* สถานะรวม */
+.srv-status { display: grid; grid-template-columns: minmax(200px, 34%) 1fr; gap: 14px; padding: 12px 14px; margin-bottom: 12px;
+    border: 1px solid #e5e7eb; border-left: 6px solid #cbd5e1; border-radius: 12px; background: #f8fafc; }
+.srv-b-green { border-left-color: #16a34a; background: #f0fdf4; }
+.srv-b-yellow { border-left-color: #eab308; background: #fefce8; }
+.srv-b-orange { border-left-color: #ea580c; background: #fff7ed; }
+.srv-b-red { border-left-color: #dc2626; background: #fef2f2; }
+.srv-status-l { font-size: 12px; color: #5b6573; font-weight: 600; margin-bottom: 2px; }
+.srv-status-v { font-size: 22px; font-weight: 800; line-height: 1.25; display: flex; align-items: center; flex-wrap: wrap; }
+.srv-status-v .srv-dot { width: 16px; height: 16px; margin-right: 8px; }
+.srv-status-t { font-size: 15px; font-weight: 600; color: #334155; margin: 2px 0 0 24px; }
+.srv-count { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(15, 23, 42, .12);
+    font-size: 13px; font-weight: 600; color: #334155; }
+.srv-count-l { flex-basis: 100%; font-size: 12px; color: #5b6573; }
+.srv-count-i { display: inline-flex; align-items: center; }
+.srv-count-i.srv-c-none { color: #64748b; font-weight: 500; }
+.srv-reason ul { list-style: none; margin: 0; padding: 0; }
+.srv-reason li { position: relative; margin: 2px 0; padding-left: 14px; }
+.srv-reason li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 5px; height: 5px; border-radius: 50%; background: #64748b; }
+
+/* ตารางตัวชี้วัด */
+.srv-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+.srv-w-topic { width: 150px; }
+.srv-w-st { width: 118px; }
+.srv-w-time { width: 92px; }
+.srv-table th { background: #eef2f7; color: #334155; font-size: 12.5px; font-weight: 700; padding: 7px 10px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+.srv-table td { padding: 8px 10px; vertical-align: top; border-bottom: 1px solid #eef0f3; }
+.srv-table tbody tr:last-child td { border-bottom: 0; }
+.srv-table tbody tr:nth-child(even) td { background: #fbfcfe; }
+.srv-table td:first-child { box-shadow: inset 4px 0 0 #cbd5e1; }
+.srv-r-green td:first-child { box-shadow: inset 4px 0 0 #16a34a; }
+.srv-r-yellow td:first-child { box-shadow: inset 4px 0 0 #eab308; }
+.srv-r-orange td:first-child { box-shadow: inset 4px 0 0 #ea580c; }
+.srv-r-red td:first-child { box-shadow: inset 4px 0 0 #dc2626; }
+.srv-r-none .srv-topic { color: #475569; }
+.srv-topic { font-weight: 700; color: #0f172a; }
+.srv-ico { display: inline-block; width: 22px; }
+.srv-detail { word-break: break-word; }
+.srv-seg { display: inline; }
+.srv-sep { color: #94a3b8; margin: 0 6px; }
+.srv-sub { margin-top: 6px; padding: 5px 8px; background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155; }
+.srv-sub > b { display: block; font-size: 12px; color: #5b6573; }
+.srv-list { list-style: none; margin: 2px 0 0; padding: 0; }
+.srv-list li { margin: 2px 0; }
+.srv-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.srv-chips .srv-chip { white-space: normal; flex-wrap: wrap; }
+.srv-chips .srv-chip small { flex-basis: 100%; font-weight: 500; font-size: 11.5px; opacity: .9; }
+.srv-when { font-size: 13px; }
+.srv-time { font-weight: 700; color: #0f172a; }
+.srv-stale { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: #fee2e2; color: #991b1b; font-size: 11px; font-weight: 700; }
+
+/* ข้อเสนอ / แนะนำ */
+.srv-h { font-weight: 700; margin: 14px 0 6px; }
+.srv-kv { width: 100%; border: 1px solid #e5e7eb; border-radius: 12px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+.srv-kv th { width: 230px; background: #f8fafc; font-weight: 700; padding: 7px 10px; vertical-align: top; text-align: left; border-bottom: 1px solid #eef0f3; }
+.srv-kv td { padding: 7px 10px; border-bottom: 1px solid #eef0f3; }
+.srv-kv tr:last-child th, .srv-kv tr:last-child td { border-bottom: 0; }
+.srv-extra p { margin: 8px 0 0; }
+.srv-foot { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: stretch; margin-top: 12px; }
+.srv-rec { padding: 10px 12px; border-radius: 12px; background: #fff7ed; border: 1px solid #fed7aa; color: #7c2d12; }
+.srv-next { padding: 10px 12px; border-radius: 12px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.srv-raw { margin-top: 4px; }
+
+/* มือถือ: ตาราง → การ์ด */
+@media (max-width: 640px) {
+    .srv-status { grid-template-columns: 1fr; gap: 8px; }
+    .srv-table, .srv-table tbody, .srv-table tr, .srv-table td { display: block; width: 100%; }
+    .srv-table colgroup, .srv-table thead { display: none; }
+    .srv-table tr { border-bottom: 1px solid #e5e7eb; position: relative; }
+    .srv-table tbody tr:last-child { border-bottom: 0; }
+    .srv-table td { border-bottom: 0; padding: 3px 10px 3px 16px; }
+    .srv-table td:first-child { padding-top: 9px; box-shadow: none; }
+    .srv-table td:last-child { padding-bottom: 9px; }
+    .srv-table tr::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #cbd5e1; }
+    .srv-r-green::before { background: #16a34a !important; }
+    .srv-r-yellow::before { background: #eab308 !important; }
+    .srv-r-orange::before { background: #ea580c !important; }
+    .srv-r-red::before { background: #dc2626 !important; }
+    .srv-table td.srv-topic, .srv-table td[data-th="สถานะ"] { display: inline-block; width: auto; }
+    .srv-when::before { content: "อัปเดต "; color: #94a3b8; }
+    .srv-when.is-none::before { content: none; }
+    .srv-kv th, .srv-kv td { display: block; width: auto; }
+    .srv-kv th { border-bottom: 0; padding-bottom: 0; }
+    .srv-foot { grid-template-columns: 1fr; }
+}
+
+/* กล่องสถานะโรงพยาบาล: ข้อมูลเปลี่ยนหลังประกาศ (สถานะที่ประกาศไม่เปลี่ยนเอง) */
+.sat-overall-stale { margin: 8px 0; padding: 8px 12px; border: 1px solid #fcd34d; background: #fffbeb; border-radius: 10px; color: #78350f; font-size: 13.5px; }
+.sat-overall-stale > div + div { margin-top: 4px; }
+.sat-overall-stale .sat-stale-chg { font-weight: 600; }
+.sat-overall-stale .btn { margin-top: 6px; }

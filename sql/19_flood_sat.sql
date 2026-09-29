@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `flood_sat_item` (
   `code` VARCHAR(30) NOT NULL,
   `status` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'green|yellow|orange|red',
   `note` TEXT DEFAULT NULL,
+  `src` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'auto = ดึงประมวล · ว่าง = บันทึกเอง',
   `updated_by` INT UNSIGNED DEFAULT NULL,
   `updated_at` DATETIME DEFAULT NULL,
   PRIMARY KEY (`code`)
@@ -27,6 +28,8 @@ CREATE TABLE IF NOT EXISTS `flood_sat_item_log` (
   `code` VARCHAR(30) NOT NULL,
   `status` VARCHAR(10) NOT NULL DEFAULT '',
   `note` TEXT DEFAULT NULL,
+  `src` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'auto = ดึงประมวล (ระบบรวบรวม) · ว่าง = บันทึกเอง',
+  `data_json` MEDIUMTEXT DEFAULT NULL COMMENT 'ข้อมูลย่อยที่ใช้ประมวล (JSON)',
   `user_id` INT UNSIGNED DEFAULT NULL,
   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`log_id`),
@@ -119,3 +122,7 @@ CREATE TABLE IF NOT EXISTS `flood_sat_sitrep` (
   KEY `idx_flood_sat_sitrep_no` (`report_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ฐานที่สร้างตารางไว้ก่อนมีปุ่ม "ดึงประมวล" (29 ก.ย. 69): ระบบเพิ่มคอลัมน์ src / data_json ให้เองตอนเปิดหน้า SAT
+-- (Sat_Model::upgradeItemLog) — ถ้าบัญชีฐานข้อมูลไม่มีสิทธิ์ ALTER ให้รันเอง:
+--   ALTER TABLE flood_sat_item_log ADD COLUMN `src` VARCHAR(10) NOT NULL DEFAULT '' AFTER `note`, ADD COLUMN `data_json` MEDIUMTEXT DEFAULT NULL AFTER `src`;
+--   ALTER TABLE flood_sat_item ADD COLUMN `src` VARCHAR(10) NOT NULL DEFAULT '' AFTER `note`;

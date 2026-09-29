@@ -12,6 +12,7 @@ $next = date('Y-m-d', strtotime($date . ' +1 day'));
 $qs = function ($d) {
     return URL . 'flood/manpower?' . http_build_query(array_filter(array('date' => $d, 'group' => $this->mpGroup)));
 };
+$canEdit = !isset($this->mpCanEdit) || $this->mpCanEdit;   // false = ผู้บริหาร/ดูอย่างเดียว
 $statusLabel = array(
     'short' => 'ขาด', 'ok' => 'ครบ', 'over' => 'เกิน', 'nodata' => 'รอข้อมูล', 'wait' => 'ยังไม่ถึงเวร', 'none' => 'ไม่มีเวร',
 );
@@ -60,7 +61,7 @@ $statusLabel = array(
         <?php } else { ?>· ยังไม่เคยดึงข้อมูลวันนี้<?php } ?>
         <small class="text-muted">(ดึงใหม่อัตโนมัติทุก <?= (int) $api['every'] ?> นาทีเมื่อเปิดหน้าวันนี้/เมื่อวาน)</small>
     </span>
-    <button type="button" class="btn btn-default btn-sm js-mp-sync" data-date="<?= h($date) ?>"><i class="fa fa-refresh"></i> ดึงข้อมูลลงเวลา</button>
+    <?php if ($canEdit) { ?><button type="button" class="btn btn-default btn-sm js-mp-sync" data-date="<?= h($date) ?>"><i class="fa fa-refresh"></i> ดึงข้อมูลลงเวลา</button><?php } ?>
     <?php } ?>
 </div>
 
@@ -125,11 +126,11 @@ $statusLabel = array(
                         <?php if ($c['status'] === 'none') { ?>
                         <span class="mp-none">—</span>
                         <?php } else { ?>
-                        <button type="button" class="mp-cell st-<?= h($c['status']) ?> js-mp-cell"
-                            data-unit="<?= $id ?>" data-shift="<?= h($s) ?>" data-name="<?= h($u['unit_name']) ?>"
+                        <<?= $canEdit ? 'button type="button"' : 'span style="cursor:default"' ?> class="mp-cell st-<?= h($c['status']) ?><?= $canEdit ? ' js-mp-cell' : '' ?>"
+                            <?php if ($canEdit) { ?>                            data-unit="<?= $id ?>" data-shift="<?= h($s) ?>" data-name="<?= h($u['unit_name']) ?>"
                             data-req="<?= (int) $c['req'] ?>" data-actual="<?= $c['src'] === 'manual' ? (int) $c['actual'] : '' ?>"
                             data-checkin="<?= $c['checkin'] === null ? '' : (int) $c['checkin'] ?>" data-other="<?= (int) $c['other'] ?>"
-                            data-note="<?= h($c['note']) ?>" data-by="<?= h($c['by']) ?>" data-at="<?= h($c['at'] ? flood_thai_date($c['at']) : '') ?>"
+                            data-note="<?= h($c['note']) ?>" data-by="<?= h($c['by']) ?>" data-at="<?= h($c['at'] ? flood_thai_date($c['at']) : '') ?>"<?php } ?>
                             aria-label="<?= h($u['unit_name'] . ' เวร' . $meta['name'] . ' ' . $statusLabel[$c['status']]) ?>">
                             <span class="mp-num"><?= $c['actual'] === null ? '–' : (int) $c['actual'] ?><small>/<?= (int) $c['req'] ?></small></span>
                             <span class="mp-st"><?php
@@ -137,7 +138,7 @@ $statusLabel = array(
                                 elseif ($c['status'] === 'over') { echo 'เกิน ' . $c['diff']; }
                                 else { echo h($statusLabel[$c['status']]); } ?></span>
                             <?php if ($c['src'] === 'manual') { ?><i class="fa fa-pencil mp-src" title="กรอกเอง"></i><?php } elseif ($c['src'] === 'checkin') { ?><i class="fa fa-clock-o mp-src" title="จากการลงเวลา"></i><?php } ?>
-                        </button>
+                        </<?= $canEdit ? 'button' : 'span' ?>>
                         <?php } ?>
                     </td>
                     <?php } ?>
@@ -148,11 +149,12 @@ $statusLabel = array(
     </div>
 </div>
 <p class="small-muted mp-foot">
-    นับเฉพาะพยาบาลวิชาชีพ (RN) ที่ลงเวลาในเวรนั้น ไม่นับคนซ้ำ · <i class="fa fa-clock-o"></i> = จากระบบลงเวลา · <i class="fa fa-pencil"></i> = เจ้าหน้าที่กรอกเอง (ใช้แทนค่าจากการลงเวลา)
+    นับเฉพาะพยาบาลวิชาชีพ (RN) ที่ลงเวลาในเวรนั้น ไม่นับคนซ้ำ · <i class="fa fa-clock-o"></i> = จากระบบลงเวลา · <i class="fa fa-pencil"></i> = เจ้าหน้าที่กรอกเอง (ใช้แทนค่าจากการลงเวลา)<?= $canEdit ? '' : ' · <i class="fa fa-eye"></i> ดูอย่างเดียว — กรอก/ดูรายชื่อผู้ลงเวลาได้เฉพาะเจ้าหน้าที่ศูนย์' ?>
     · เกณฑ์: หอที่มีพยาบาล 2 คนไม่ลดคน · ลดได้ครั้งละ 1 คนต่อเวร เช้าวันทำการไม่ลด · ผู้ป่วยใส่เครื่องช่วยหายใจ/HFNC นับยอดเพิ่ม 2 คนต่อราย
     · กรอบตามเอกสารเกณฑ์ลดเพิ่มคน 1 ก.ค. 2568
 </p>
 
+<?php if (!$canEdit) { return; } ?>
 <div class="modal fade" id="mpModal" tabindex="-1" role="dialog">
     <div class="modal-dialog">
         <form class="modal-content" id="mpForm">

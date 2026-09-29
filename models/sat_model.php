@@ -72,7 +72,7 @@ class Sat_Model extends Model {
                 'hint' => 'ติดเตียง / ออกซิเจน / ฟอกไต / NCD'),
             'hosp_site' => array('name' => 'ตัวโรงพยาบาล', 'emoji' => '🏨', 'icon' => 'fa-building', 'hours' => 3, 'group' => 'hosp',
                 'hint' => 'น้ำท่วมในโรงพยาบาล / ทางเข้า–ออก'),
-            'ed_load' => array('name' => 'ผู้ป่วยที่ ER', 'emoji' => '🚨', 'icon' => 'fa-heartbeat', 'hours' => 3, 'group' => 'hosp',
+            'ed_load' => array('name' => 'ข้อมูลป่วยใน รพ.', 'emoji' => '🚨', 'icon' => 'fa-heartbeat', 'hours' => 3, 'group' => 'hosp',
                 'hint' => 'ผู้ป่วยเพิ่มผิดปกติหรือไม่'),
             'util_power' => array('name' => 'ไฟฟ้า', 'emoji' => '⚡', 'icon' => 'fa-bolt', 'hours' => 6, 'group' => 'util', 'hint' => ''),
             'util_water' => array('name' => 'น้ำประปา', 'emoji' => '🚰', 'icon' => 'fa-shower', 'hours' => 6, 'group' => 'util', 'hint' => ''),
@@ -170,6 +170,7 @@ class Sat_Model extends Model {
             foreach (self::schemaSql() as $sql) {
                 $this->db->exec($sql);
             }
+            $this->upgradeItemLog();
             if ((int) $this->db->selectValue('SELECT COUNT(*) FROM flood_sat_facility') === 0) {
                 $this->seedFacilities();
             }
@@ -182,6 +183,30 @@ class Sat_Model extends Model {
             $ready = false;
         }
         return $ready;
+    }
+
+    /** มีคอลัมน์ src / data_json ("ดึงประมวล") แล้วหรือยัง — null = ยังไม่ได้ตรวจ */
+    private static $logExtra = null;
+
+    /**
+     * ตารางที่สร้างก่อนมีปุ่ม "ดึงประมวล" → เพิ่มคอลัมน์ src (+ data_json ในประวัติ)
+     * เพิ่มไม่ได้ (ไม่มีสิทธิ์ ALTER) ก็ยังใช้หน้า SAT ได้ตามเดิม แค่ไม่แยกว่ามาจากดึงประมวล
+     */
+    private function upgradeItemLog() {
+        try {
+            if (!$this->db->select("SHOW COLUMNS FROM flood_sat_item_log LIKE 'src'")) {
+                $this->db->exec("ALTER TABLE flood_sat_item_log
+                    ADD COLUMN `src` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'auto = ดึงประมวล (ระบบรวบรวม) · ว่าง = บันทึกเอง' AFTER `note`,
+                    ADD COLUMN `data_json` MEDIUMTEXT DEFAULT NULL COMMENT 'ข้อมูลย่อยที่ใช้ประมวล (JSON)' AFTER `src`");
+            }
+            if (!$this->db->select("SHOW COLUMNS FROM flood_sat_item LIKE 'src'")) {
+                $this->db->exec("ALTER TABLE flood_sat_item ADD COLUMN `src` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'auto = ดึงประมวล · ว่าง = บันทึกเอง' AFTER `note`");
+            }
+            self::$logExtra = true;
+        } catch (Exception $e) {
+            error_log('[flood] SAT item log upgrade: ' . $e->getMessage());
+            self::$logExtra = false;
+        }
     }
 
     /** คำสั่งสร้างตาราง — ชุดเดียวกับ sql/19_flood_sat.sql */
@@ -199,6 +224,7 @@ class Sat_Model extends Model {
               `code` VARCHAR(30) NOT NULL,
               `status` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'green|yellow|orange|red',
               `note` TEXT DEFAULT NULL,
+              `src` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'auto = ดึงประมวล · ว่าง = บันทึกเอง',
               `updated_by` INT UNSIGNED DEFAULT NULL,
               `updated_at` DATETIME DEFAULT NULL,
               PRIMARY KEY (`code`)
@@ -208,6 +234,8 @@ class Sat_Model extends Model {
               `code` VARCHAR(30) NOT NULL,
               `status` VARCHAR(10) NOT NULL DEFAULT '',
               `note` TEXT DEFAULT NULL,
+              `src` VARCHAR(10) NOT NULL DEFAULT '' COMMENT 'auto = ดึงประมวล (ระบบรวบรวม) · ว่าง = บันทึกเอง',
+              `data_json` MEDIUMTEXT DEFAULT NULL COMMENT 'ข้อมูลย่อยที่ใช้ประมวล (JSON)',
               `user_id` INT UNSIGNED DEFAULT NULL,
               `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
               PRIMARY KEY (`log_id`),
@@ -430,14 +458,38 @@ class Sat_Model extends Model {
         return $out;
     }
 
-    public function saveItem($code, $status, $note, $uid) {
+    /** $src = 'auto' เมื่อมาจากปุ่ม "ดึงประมวล" (บันทึกเอง = '') · $data = JSON ข้อมูลย่อยที่ใช้ประมวล (เก็บในประวัติ) */
+    public function saveItem($code, $status, $note, $uid, $src = '', $data = null) {
         $now = date('Y-m-d H:i:s');
+        $extra = self::$logExtra === true;
+        $p = array(':c' => $code, ':s' => $status, ':n' => $note, ':u' => $uid, ':t' => $now);
+        if ($extra) {
+            $p[':src'] = (string) $src;
+        }
         $this->db->prepare(
-            'INSERT INTO flood_sat_item (code, status, note, updated_by, updated_at) VALUES (:c, :s, :n, :u, :t)
-             ON DUPLICATE KEY UPDATE status = VALUES(status), note = VALUES(note), updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)')
-            ->execute(array(':c' => $code, ':s' => $status, ':n' => $note, ':u' => $uid, ':t' => $now));
-        $this->db->insert('flood_sat_item_log', array('code' => $code, 'status' => $status, 'note' => $note,
-            'user_id' => $uid, 'created_at' => $now));
+            'INSERT INTO flood_sat_item (code, status, note, ' . ($extra ? 'src, ' : '') . 'updated_by, updated_at)
+             VALUES (:c, :s, :n, ' . ($extra ? ':src, ' : '') . ':u, :t)
+             ON DUPLICATE KEY UPDATE status = VALUES(status), note = VALUES(note), ' . ($extra ? 'src = VALUES(src), ' : '')
+            . 'updated_by = VALUES(updated_by), updated_at = VALUES(updated_at)')
+            ->execute($p);
+        $log = array('code' => $code, 'status' => $status, 'note' => $note, 'user_id' => $uid, 'created_at' => $now);
+        if ($extra) {
+            $log['src'] = (string) $src;
+            $log['data_json'] = $data;
+        }
+        $this->db->insert('flood_sat_item_log', $log);
+    }
+
+    /** สีของตัวชี้วัดแต่ละตัว ณ เวลาหนึ่ง (บันทึกล่าสุดที่ไม่เกินเวลานั้น) — ใช้ดูว่าหลังประกาศสถานะมีตัวชี้วัดใดเปลี่ยนสี */
+    public function itemStatusAt($at) {
+        $out = array();
+        foreach ($this->db->select(
+            'SELECT l.code, l.status FROM flood_sat_item_log l
+             JOIN (SELECT code, MAX(log_id) AS mid FROM flood_sat_item_log WHERE created_at <= :t GROUP BY code) x ON x.mid = l.log_id',
+            array(':t' => $at)) as $r) {
+            $out[$r['code']] = (string) $r['status'];
+        }
+        return $out;
     }
 
     public function itemHistory($code, $limit = 20) {
@@ -705,15 +757,52 @@ class Sat_Model extends Model {
         return '';
     }
 
-    /** สรุป 4 สี ทั้งหมด + รายหน่วยสำคัญ + ป้ายเด่น (ไม่มีชื่อบุคคล) */
+    /** สถานะการติดตามบุคลากร (ตรงกับ flood_staff_follow_options() ใน models/staff_model.php) — ชื่อสั้นสำหรับการ์ด/SitRep */
+    public static function staffFollowNames() {
+        return array('new' => 'ยังไม่ติดตาม', 'contacted' => 'ติดต่อแล้ว', 'helping' => 'กำลังช่วยเหลือ',
+            'done' => 'ช่วยเหลือแล้ว', 'no_need' => 'ไม่ต้องการ');
+    }
+
+    /**
+     * ข้อความสรุปการติดตามผู้ได้รับผลกระทบ (รุนแรง + ปานกลาง) หนึ่งบรรทัด — '' ถ้าไม่มีผู้ได้รับผลกระทบ
+     * $compact = true (การ์ด SAT): ไม่แสดงสถานะที่เป็น 0
+     */
+    public static function staffFollowText($st, $compact = false) {
+        if (empty($st['ready']) || empty($st['follow']) || empty($st['follow_aff'])) {
+            return '';
+        }
+        $aff = (int) $st['follow_aff'];
+        $wait = (int) $st['follow']['new']['affected'];
+        $done = $aff - $wait;
+        $parts = array();
+        foreach (self::staffFollowNames() as $code => $name) {
+            $n = (int) $st['follow'][$code]['affected'];
+            if ($code === 'new' || ($compact && !$n)) {
+                continue;
+            }
+            $parts[] = $name . ' ' . $n;
+        }
+        if ($compact) {
+            return 'ติดตามแล้ว ' . $done . '/' . $aff . ' คน (' . round($done / $aff * 100) . '%)' . ($parts ? ': ' . implode(' · ', $parts) : '');
+        }
+        return 'การติดตามผู้ได้รับผลกระทบ ' . $aff . ' คน: ' . implode(' · ', $parts) . ' · ยังไม่ติดตาม ' . $wait
+            . ' (ติดตามแล้ว ' . round($done / $aff * 100) . '%)';
+    }
+
+    /** สรุป 4 สี ทั้งหมด + รายหน่วยสำคัญ + ป้ายเด่น + การติดตาม (ไม่มีชื่อบุคคล) */
     public function staffSummary() {
         $blank = array('red' => 0, 'orange' => 0, 'yellow' => 0, 'green' => 0, 'unknown' => 0, 'total' => 0);
-        $out = array('ready' => false, 'all' => $blank, 'units' => array(), 'flags' => array(), 'last_at' => null);
+        $follow = array();
+        foreach (self::staffFollowNames() as $code => $name) {
+            $follow[$code] = array('affected' => 0, 'total' => 0);
+        }
+        $out = array('ready' => false, 'all' => $blank, 'units' => array(), 'flags' => array(), 'last_at' => null,
+            'follow' => $follow, 'follow_aff' => 0);
         try {
             if (!$this->db->selectValue("SHOW TABLES LIKE 'flood_staff'")) {
                 return $out;
             }
-            $rows = $this->db->select('SELECT department, travel, work_status, victim, flags, last_at FROM flood_staff');
+            $rows = $this->db->select('SELECT department, travel, work_status, victim, flags, last_at, level, follow_status FROM flood_staff');
         } catch (Exception $e) {
             return $out;
         }
@@ -738,6 +827,12 @@ class Sat_Model extends Model {
             }
             if ($r['last_at'] && ($out['last_at'] === null || $r['last_at'] > $out['last_at'])) {
                 $out['last_at'] = $r['last_at'];
+            }
+            $fs = isset($out['follow'][$r['follow_status']]) ? $r['follow_status'] : 'new';
+            $out['follow'][$fs]['total']++;
+            if ($r['level'] === 'severe' || $r['level'] === 'moderate') {
+                $out['follow'][$fs]['affected']++;
+                $out['follow_aff']++;
             }
         }
         $out['flags'] = $flags;

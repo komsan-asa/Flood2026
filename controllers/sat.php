@@ -15,6 +15,9 @@ class Sat extends Controller {
     /** @var Flood_Model */
     private $flood;
 
+    /** false = ไม่เรียก hosxp-site-api ใน collect() (อ่านแคชอย่างเดียว — หน้าสาธารณะ) */
+    public $hisFetch = true;
+
     function __construct() {
         parent::__construct();
         $this->view->css = array('flood/css/default.css', 'flood/css/sat.css');
@@ -42,8 +45,17 @@ class Sat extends Controller {
         if (!$s->model->ensureTables()) {
             return null;
         }
+        $s->hisFetch = false;
         $c = $s->collect();
         list($sug, $reasons) = $s->suggest($c);
+        // เหตุผลภายใน (สาธารณูปโภค/ศูนย์พักพิง — ตัวเลขปฏิบัติการของโรงพยาบาล) ไม่แสดงบนหน้าสาธารณะ และไม่นับในสีที่ระบบประเมินของหน้านั้น
+        $reasons = array_values(array_filter($reasons, function ($x) {
+            return empty($x[2]);
+        }));
+        $sug = 'green';
+        foreach ($reasons as $x) {
+            $sug = Sat_Model::worst($sug, $x[0]);
+        }
         $d = $s->declared($c['settings']);
         $staffSum = null;
         try {
@@ -170,6 +182,7 @@ class Sat extends Controller {
                 'note' => $s ? (string) $s['note'] : '',
                 'at' => $s ? (string) $s['updated_at'] : '',
                 'by' => $s ? (string) $s['by_name'] : '',
+                'src' => $s && isset($s['src']) ? (string) $s['src'] : '',   // auto = มาจากปุ่ม "ดึงประมวล"
                 'stale' => !$at || ($now - $at) > $def['hours'] * 3600,
             );
         }
@@ -258,9 +271,15 @@ class Sat extends Controller {
         }
         $mp = $this->manpowerNow();
         $vuln = $this->vulnerableNow();
+        // ข้อมูลจากหน้าอื่นของโรงพยาบาล: สาธารณูปโภค · Refer เข้า · กลุ่มเปราะบางในศูนย์พักพิง
+        $util = $this->utilityNow();
+        $refer = $this->referNow();
+        $shelter = $this->shelterNow();
+        // ER / IPD / OPD / Refer จาก HOSxP (hosxp-site-api · แคช 10 นาที)
+        $his = $this->hisNow($settings);
 
         return compact('settings', 'hosp', 'items', 'facilities', 'fac', 'routes', 'near', 'road', 'mapZones', 'hospIn',
-            'staff', 'staffCrit', 'mp', 'vuln');
+            'staff', 'staffCrit', 'mp', 'vuln', 'util', 'refer', 'shelter', 'his');
     }
 
     /** RN เวรปัจจุบัน: หน่วยที่ขาด / ยังไม่มีข้อมูล (หน้า flood/manpower) */
@@ -320,6 +339,209 @@ class Sat extends Controller {
         return $out;
     }
 
+    /**
+     * สาธารณูปโภค (หน้า sat/utility · ชีตงานช่าง) → ข้อความ + สีที่ระบบแนะนำ ของตัวชี้วัด util_o2 / util_fuel / util_water
+     * เกณฑ์ (ข้อเสนอ — SAT เป็นผู้ตัดสิน):
+     *   ออกซิเจนเหลวพอใช้ < 1 วัน แดง · < 2 วัน ส้ม · < 3 วัน เหลือง
+     *   น้ำมันสำรองรวม < 25% แดง · < 50% ส้ม · < 70% เหลือง
+     *   ถังพักน้ำ หมดถังตั้งแต่ครึ่งหนึ่งของอาคาร แดง · มีอาคารหมดถัง ส้ม · ต่ำสุด < 25% เหลือง
+     *   ค่าวัดเก่ากว่า 48 ชม. ไม่ให้สี (แสดงข้อความพร้อมวันที่เท่านั้น)
+     */
+    private function utilityNow() {
+        $out = array('ready' => false, 'imported_at' => null, 'items' => array());
+        try {
+            require_once 'models/utility_model.php';
+            $um = new Utility_Model();
+            if (!$um->ensureTables()) {
+                return $out;
+            }
+            $s = $um->summary();
+        } catch (Exception $e) {
+            error_log('[flood] SAT utility: ' . $e->getMessage());
+            return $out;
+        }
+        $out['ready'] = true;
+        $out['imported_at'] = $s['imported_at'];
+        $num = function ($v, $dec = 0) {
+            return number_format((float) $v, $dec);
+        };
+        $when = function ($date, $slot = '') {
+            return flood_thai_date($date, false) . ($slot !== '' && $slot !== '00:00' ? ' ' . $slot . ' น.' : '');
+        };
+        $fresh = function ($date, $slot = '') {
+            return (time() - strtotime($date . ' ' . ($slot !== '' ? $slot : '23:59'))) <= 48 * 3600;
+        };
+
+        // ออกซิเจนเหลว: ค่าล่าสุด + อัตราใช้ → พอใช้อีกกี่วัน
+        if ($s['oxygen']) {
+            $o = $s['oxygen'];
+            $last = $o['last'];
+            $days = $o['days_left'];
+            $color = '';
+            if ($days !== null && $fresh($last['log_date'], (string) $last['slot'])) {
+                $color = $days < 1 ? 'red' : ($days < 2 ? 'orange' : ($days < 3 ? 'yellow' : 'green'));
+            }
+            $out['items']['util_o2'] = array('status' => $color, 'fresh' => $fresh($last['log_date'], (string) $last['slot']),
+                'text' => 'ออกซิเจนเหลว ' . $num($last['volume_m3']) . ' ลบ.ม. (' . $when($last['log_date'], (string) $last['slot']) . ')'
+                    . ($o['rate_day'] ? ' · ใช้ ~' . $num($o['rate_day']) . ' ลบ.ม./วัน · พอใช้อีก ~' . $num($days, 1) . ' วัน' : ''),
+                'value' => $num($last['volume_m3']) . ' ลบ.ม.',
+                'sub' => ($days !== null ? 'พอใช้อีก ~' . $num($days, 1) . ' วัน · ' : '') . $when($last['log_date'], (string) $last['slot']));
+        }
+
+        // น้ำมันสำรอง (เครื่องกำเนิดไฟฟ้า + ถังสำรอง) ของวันล่าสุด
+        if ($s['fuel'] && $s['fuel']['pct'] !== null) {
+            $f = $s['fuel'];
+            $pct = (float) $f['pct'];
+            $lowItem = null;
+            foreach ($f['items'] as $it) {
+                if ((float) $it['capacity_l'] > 0 && $it['remain_l'] !== null) {
+                    $p = (float) $it['remain_l'] * 100 / (float) $it['capacity_l'];
+                    if ($lowItem === null || $p < $lowItem[1]) {
+                        $lowItem = array((string) $it['item'], $p);
+                    }
+                }
+            }
+            $color = $fresh($f['date']) ? ($pct < 25 ? 'red' : ($pct < 50 ? 'orange' : ($pct < 70 ? 'yellow' : 'green'))) : '';
+            $out['items']['util_fuel'] = array('status' => $color, 'fresh' => $fresh($f['date']),
+                'text' => 'น้ำมันสำรอง ' . $num($f['remain']) . '/' . $num($f['capacity']) . ' ลิตร (' . $num($pct) . '%) · ' . $when($f['date'])
+                    . ($lowItem && $lowItem[1] < 50 ? ' · ต่ำสุด ' . $lowItem[0] . ' ' . $num($lowItem[1]) . '%' : ''),
+                'value' => $num($pct) . '%',
+                'sub' => $num($f['remain']) . '/' . $num($f['capacity']) . ' ลิตร · ' . $when($f['date']));
+        }
+
+        // ถังพักน้ำ: ค่าล่าสุดของแต่ละอาคาร (หมดถัง = 0%) + รถเติมน้ำวันล่าสุด
+        if ($s['water'] && $s['water']['buildings']) {
+            $empty = array();
+            $low = array();
+            $min = null;
+            $latest = '';
+            $n = 0;
+            foreach ($s['water']['buildings'] as $b) {
+                $vals = array();
+                foreach (array('lower_pct', 'upper_pct') as $k) {
+                    if ($b[$k] !== null) {
+                        $vals[] = (float) $b[$k];
+                    }
+                }
+                $p = ((int) $b['lower_empty'] || (int) $b['upper_empty']) ? 0.0 : ($vals ? min($vals) : null);
+                if ($p === null) {
+                    continue;
+                }
+                $n++;
+                if ($p <= 0) {
+                    $empty[] = (string) $b['building'];
+                } elseif ($p < 25) {
+                    $low[] = $b['building'] . ' ' . $num($p) . '%';
+                }
+                $min = $min === null ? $p : min($min, $p);
+                $at = $b['log_date'] . ' ' . $b['slot'];
+                if ($at > $latest) {
+                    $latest = $at;
+                }
+            }
+            if ($n) {
+                list($ld, $ls) = explode(' ', $latest);
+                $color = '';
+                if ($fresh($ld, $ls)) {
+                    $color = count($empty) >= max(2, ceil($n / 2)) ? 'red' : ($empty ? 'orange' : ($min < 25 ? 'yellow' : 'green'));
+                }
+                $de = $s['delivery'];
+                $out['items']['util_water'] = array('status' => $color, 'fresh' => $fresh($ld, $ls),
+                    'text' => 'ถังพักน้ำ ' . $n . ' อาคาร (ล่าสุด ' . $when($ld, $ls) . ')'
+                        . ($empty ? ' · หมดถัง: ' . implode(', ', $empty) : '')
+                        . ($low ? ' · ต่ำกว่า 25%: ' . implode(', ', $low) : '')
+                        . (!$empty && !$low ? ' · ต่ำสุด ' . $num($min) . '%' : '')
+                        . ($de ? ' · รถเติมน้ำ ' . $when($de['date']) . ' ' . $num($de['days'][0]['liters']) . ' ล./' . (int) $de['days'][0]['trips'] . ' เที่ยว' : ''),
+                    'value' => $empty ? 'หมดถัง ' . count($empty) . ' อาคาร' : 'ต่ำสุด ' . $num($min) . '%',
+                    'sub' => $n . ' อาคาร · ' . $when($ld, $ls));
+            }
+        }
+        return $out;
+    }
+
+    /** Refer เข้า รพ. ช่วงอุทกภัย (หน้า sat/refer) — ตัวเลขรวมเท่านั้น ไม่ส่งชื่อผู้ป่วย/Dx ออกไป */
+    private function referNow() {
+        $out = array('ready' => false, 'total' => 0, 'today' => 0, 'yesterday' => 0, 'ett' => 0, 'o2' => 0, 'since' => '', 'lines' => array());
+        try {
+            require_once 'models/refer_model.php';
+            $rm = new Refer_Model();
+            if (!$rm->ensureTables()) {
+                return $out;
+            }
+            $s = $rm->summary();
+            unset($s['rows']);
+        } catch (Exception $e) {
+            error_log('[flood] SAT refer: ' . $e->getMessage());
+            return $out;
+        }
+        if (!$s['total'] && !$s['imported_at']) {
+            return $out;
+        }
+        $y = date('Y-m-d', strtotime('-1 day'));
+        foreach ($s['byDate'] as $r) {
+            if ($r['d'] === $y) {
+                $out['yesterday'] = (int) $r['c'];
+            }
+        }
+        $first = $s['byDate'] ? $s['byDate'][count($s['byDate']) - 1]['d'] : '';
+        $out = array_merge($out, array('ready' => true, 'total' => (int) $s['total'], 'today' => (int) $s['today'],
+            'ett' => (int) $s['ett'], 'o2' => (int) $s['o2'], 'since' => $first));
+        $out['lines'][] = 'Refer เข้า รพ. ช่วงอุทกภัย ' . $out['total'] . ' ราย' . ($first ? ' ตั้งแต่ ' . flood_thai_date($first, false) : '')
+            . ' (' . flood_thai_date(date('Y-m-d'), false) . ' ' . $out['today'] . ' · ' . flood_thai_date($y, false) . ' ' . $out['yesterday'] . ')'
+            . (!empty($s['imported_at']) ? ' · ข้อมูลชีต ณ ' . flood_thai_date($s['imported_at']) : '');
+        $hosp = array();
+        foreach (array_slice($s['byHosp'], 0, 3) as $r) {
+            $hosp[] = $r['name'] . ' ' . (int) $r['c'];
+        }
+        $out['lines'][] = 'on ET tube ' . $out['ett'] . ' · on O2 ' . $out['o2'] . ($hosp ? ' · ต้นทาง ' . implode(', ', $hosp) : '');
+        return $out;
+    }
+
+    /** ตัวเลขผู้รับบริการวันนี้/เมื่อวานจาก HOSxP ผ่าน hosxp-site-api (models/hosxp_api_model.php) — ไม่มีข้อมูลรายบุคคล */
+    private function hisNow($settings) {
+        $out = array('ready' => false, 'configured' => false, 'today' => null, 'yest' => null, 'at' => '', 'error' => '', 'lines' => array());
+        if (!is_file('models/hosxp_api_model.php')) {
+            return $out;
+        }
+        try {
+            require_once 'models/hosxp_api_model.php';
+            $out = array_merge($out, HosxpApi::daily($this->model, $settings, $this->hisFetch));
+            $out['lines'] = HosxpApi::lines($out);
+        } catch (Exception $e) {
+            error_log('[flood] SAT HOSxP: ' . $e->getMessage());
+        }
+        return $out;
+    }
+
+    /** กลุ่มเปราะบางในศูนย์พักพิง (ชีตรายงานศูนย์พักพิง ที่ดึงในหน้า flood/vulnerable) — ตัวเลขรวมของวันที่รายงานล่าสุด */
+    private function shelterNow() {
+        $out = array('ready' => false, 'date' => '', 'sum' => array(), 'lines' => array());
+        try {
+            $db = $this->flood->db;
+            if (!$db->selectValue("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'flood_shelter_report'")) {
+                return $out;
+            }
+            $d = $db->selectValue('SELECT MAX(report_date) FROM flood_shelter_report');
+            if (!$d) {
+                return $out;
+            }
+            $sum = $db->selectOne('SELECT COUNT(*) shelters, SUM(people) people, SUM(elderly) elderly, SUM(disabled) disabled, SUM(child) child,
+                SUM(bedridden) bedridden, SUM(pregnant) pregnant, SUM(dialysis_hd) dialysis_hd, SUM(dialysis_capd) dialysis_capd,
+                SUM(mental) mental, SUM(chronic) chronic FROM flood_shelter_report WHERE report_date = :d', array(':d' => $d));
+        } catch (Exception $e) {
+            error_log('[flood] SAT shelter: ' . $e->getMessage());
+            return $out;
+        }
+        $sum = array_map('intval', $sum);
+        $dz = $sum['dialysis_hd'] + $sum['dialysis_capd'];
+        $out = array_merge($out, array('ready' => true, 'date' => $d, 'sum' => $sum + array('dialysis' => $dz)));
+        $out['lines'][] = 'ศูนย์พักพิง ' . flood_thai_date($d, false) . ($d !== date('Y-m-d') ? ' (ยังไม่มีรายงานวันนี้)' : '') . ': '
+            . $sum['shelters'] . ' ศูนย์ · ผู้พักพิง ' . number_format($sum['people']) . ' คน';
+        $out['lines'][] = 'ติดเตียง ' . $sum['bedridden'] . ' · ผู้สูงอายุ ' . $sum['elderly'] . ' · พิการ ' . $sum['disabled'] . ' · เด็ก 0–5 ปี ' . $sum['child']
+            . ' · ตั้งครรภ์ ' . $sum['pregnant'] . ' · ล้างไต ' . $dz . ' · โรคเรื้อรัง ' . $sum['chronic'] . ($sum['mental'] ? ' · สุขภาพจิต ' . $sum['mental'] : '');
+        return $out;
+    }
+
     /** ระบบประเมินสถานะโรงพยาบาลจากข้อมูล (ข้อเสนอ — SAT เป็นผู้ประกาศ) → [สี, [[สี, เหตุผล], ...]] */
     private function suggest($c) {
         $col = Sat_Model::colors();
@@ -327,7 +549,7 @@ class Sat extends Controller {
         foreach ($c['items'] as $it) {
             if (in_array($it['status'], array('yellow', 'orange', 'red'), true)) {
                 $reasons[] = array($it['status'], $it['name'] . ': ' . $col[$it['status']]['name']
-                    . ($it['note'] !== '' ? ' — ' . mb_substr(preg_replace('/\s+/u', ' ', $it['note']), 0, 90) : '')
+                    . ($it['note'] !== '' ? ' — ' . mb_strimwidth(preg_replace('/\s+/u', ' ', $it['note']), 0, 180, '…', 'UTF-8') : '')
                     . ($it['stale'] ? ' (เกินรอบอัปเดต)' : ''));
             }
         }
@@ -368,6 +590,22 @@ class Sat extends Controller {
         if ($c['vuln']['in_zone_waiting'] > 0) {
             $reasons[] = array('yellow', 'ผู้ป่วยเสี่ยงอยู่ในพื้นที่น้ำท่วม ยังไม่อพยพ ' . $c['vuln']['in_zone_waiting'] . ' ราย');
         }
+        // สาธารณูปโภคจากชีตงานช่าง (สีที่ระบบคำนวณ — แยกจากสีที่ SAT กดเอง)
+        foreach ($c['util']['items'] as $code => $u) {
+            // SAT กดใช้ข้อมูลนี้แล้ว (สรุปของตัวชี้วัดมีข้อความเดียวกัน) → เหตุผลจากตัวชี้วัดด้านบนครอบคลุมแล้ว ไม่ซ้ำ
+            if (in_array($u['status'], array('yellow', 'orange', 'red'), true) && strpos($c['items'][$code]['note'], $u['text']) === false) {
+                $reasons[] = array($u['status'], $c['items'][$code]['name'] . ' (ข้อมูลสาธารณูปโภค): ' . $u['text'], 'internal');
+            }
+        }
+        // กลุ่มเปราะบางในศูนย์พักพิงที่อาจต้องรับเข้าโรงพยาบาล (รายงานไม่เกิน 2 วัน)
+        $sh = $c['shelter'];
+        if ($sh['ready'] && $sh['date'] >= date('Y-m-d', strtotime('-2 day'))) {
+            $x = array_filter(array($sh['sum']['bedridden'] ? 'ติดเตียง ' . $sh['sum']['bedridden'] : '',
+                $sh['sum']['dialysis'] ? 'ล้างไต ' . $sh['sum']['dialysis'] : '', $sh['sum']['pregnant'] ? 'ตั้งครรภ์ ' . $sh['sum']['pregnant'] : ''));
+            if ($x) {
+                $reasons[] = array('yellow', 'กลุ่มเปราะบางในศูนย์พักพิง ' . $sh['sum']['shelters'] . ' ศูนย์ (' . flood_thai_date($sh['date'], false) . '): ' . implode(' · ', $x), 'internal');
+            }
+        }
         foreach ($c['hospIn'] as $z) {
             $lv = Sat_Model::levelColor($z['level']);
             $reasons[] = array($lv === 'red' ? 'red' : 'orange', 'จุดที่ตั้งโรงพยาบาลอยู่ในพื้นที่ประกาศ: ' . $z['name']);
@@ -382,14 +620,38 @@ class Sat extends Controller {
         return array($best !== '' ? $best : 'green', $reasons);
     }
 
-    /** สถานะที่ SAT ประกาศล่าสุด */
+    /**
+     * สถานะที่ SAT ประกาศล่าสุด — การกด "ประกาศสถานะ" หรือการออก SitRep (สถานะในฉบับนั้น) แล้วแต่อันไหนใหม่กว่า
+     */
     private function declared($settings) {
         $o = isset($settings['overall']) ? json_decode((string) $settings['overall']['sval'], true) : null;
         if (!is_array($o) || !self::color(isset($o['status']) ? $o['status'] : '')) {
-            return null;
+            $o = null;
+        } else {
+            $o['at'] = (string) $settings['overall']['updated_at'];
+            $o['by'] = (string) $settings['overall']['by_name'];
         }
-        $o['at'] = (string) $settings['overall']['updated_at'];
-        $o['by'] = (string) $settings['overall']['by_name'];
+        try {
+            $last = null;
+            foreach ($this->model->sitreps(5) as $r) {
+                if (self::color((string) $r['overall'])) {
+                    $last = $r;
+                    break;
+                }
+            }
+            if ($last && (!$o || (string) $last['created_at'] > $o['at'])) {
+                $reason = '';
+                $full = $this->model->getSitrep((int) $last['sitrep_id']);
+                if ($full && preg_match('/^เหตุผล:\s*(.+)$/mu', (string) $full['body'], $m)) {
+                    $reason = trim($m[1]);
+                }
+                return array('status' => $last['overall'], 'at' => (string) $last['created_at'], 'by' => (string) $last['by_name'],
+                    'reason' => $reason,
+                    'sitrep_no' => (int) $last['report_no']);
+            }
+        } catch (Exception $e) {
+            // ยังไม่มีตาราง SitRep — ใช้การประกาศอย่างเดียว
+        }
         return $o;
     }
 
@@ -410,10 +672,36 @@ class Sat extends Controller {
         list($sug, $reasons) = $this->suggest($c);
         $this->view->useMap = true;
         $this->view->js[] = 'flood/js/sat.js';
+        $this->view->js[] = 'flood/js/sat_sitrep_view.js';   // SitRep แบบตาราง + ประวัติ SitRep ในกล่องสถานะ
+        $this->view->css[] = 'flood/css/sat_sitrep.css';
+        if ($this->canEdit()) {
+            // ปุ่ม "ดึงประมวล": ตัวอ่านชีตชุดเดียวกับหน้ากลุ่มเปราะบาง (sheet_pull.js) / สาธารณูปโภค (utility.js) + ThaiWater
+            $this->view->js[] = 'flood/js/sheet_pull.js';
+            $this->view->js[] = 'flood/js/utility.js';
+            $this->view->js[] = 'flood/js/sat_compile.js';
+            $this->view->satPull = $this->pullConfig($c);
+        }
         $this->view->sat = $c;
         $this->view->satSuggest = $sug;
         $this->view->satReasons = $reasons;
         $this->view->satDeclared = $this->declared($c['settings']);
+        // ตัวชี้วัดที่สีเปลี่ยนหลังประกาศสถานะ (เทียบบันทึกล่าสุดก่อนเวลาประกาศ) — กล่องสถานะขึ้นเตือนให้ประกาศใหม่
+        $declChg = array();
+        $dcl = $this->view->satDeclared;
+        if ($dcl && !empty($dcl['at'])) {
+            try {
+                $before = $this->model->itemStatusAt($dcl['at']);
+                foreach ($c['items'] as $code => $it) {
+                    $old = isset($before[$code]) ? (string) $before[$code] : '';
+                    if (!empty($it['at']) && (string) $it['at'] > $dcl['at'] && (string) $it['status'] !== $old) {
+                        $declChg[] = array('code' => $code, 'name' => $it['name'], 'old' => $old, 'new' => (string) $it['status']);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log('[flood] SAT declChanges: ' . $e->getMessage());
+            }
+        }
+        $this->view->satDeclChanges = $declChg;
         $this->view->satSitreps = $this->model->sitreps(20);
         $this->view->satNextNo = $this->model->nextSitrepNo();
         $this->view->satCanEdit = $this->canEdit();
@@ -506,7 +794,7 @@ class Sat extends Controller {
         $rows = array();
         foreach ($this->model->itemHistory($code, 30) as $r) {
             $rows[] = array('status' => $r['status'], 'note' => (string) $r['note'], 'by' => (string) $r['by_name'],
-                'at' => flood_thai_date($r['created_at']));
+                'at' => flood_thai_date($r['created_at']), 'src' => isset($r['src']) ? (string) $r['src'] : '');
         }
         flood_json(array('chk' => true, 'rows' => $rows));
     }
@@ -874,6 +1162,18 @@ class Sat extends Controller {
             $it = $items[$code];
             $s = $it['status'] !== '' ? $col[$it['status']]['emoji'] . ' ' : '⚪ ';
             $txt = $it['note'] !== '' ? preg_replace('/\s+/u', ' ', $it['note']) : '';
+            if (isset($it['src']) && $it['src'] === 'auto') {
+                // สรุปจากปุ่ม "ดึงประมวล" หลายบรรทัด: SitRep ใช้ 2 บรรทัดแรก (ฉบับเต็มดูที่ประวัติตัวชี้วัด) และไม่ต่อข้อมูลระบบซ้ำ
+                $ls = array();
+                foreach (preg_split('/\R/u', (string) $it['note']) as $ln) {
+                    $ln = trim(preg_replace('/^•\s*/u', '', trim($ln)));
+                    if ($ln !== '') {
+                        $ls[] = $ln;
+                    }
+                }
+                $txt = implode(' · ', array_slice($ls, 0, 2)) . (count($ls) > 2 ? ' …' : '');
+                $auto = '';
+            }
             $parts = array_filter(array($txt, $auto));
             $when = $it['at'] ? ' (อัปเดต ' . date('H:i', strtotime($it['at'])) . ($it['stale'] ? ' เกินรอบ' : '') . ')' : ' (ยังไม่อัปเดต)';
             return $it['emoji'] . ' ' . $it['name'] . ': ' . $s . ($parts ? implode(' · ', $parts) : '-') . $when;
@@ -922,6 +1222,10 @@ class Sat extends Controller {
             if ($crit) {
                 $staffAuto .= ' · หน่วยสำคัญที่มีคนเดินทางไม่ได้: ' . implode(', ', $crit);
             }
+            $fu = Sat_Model::staffFollowText($st, true);
+            if ($fu !== '') {
+                $staffAuto .= ' · ผู้ได้รับผลกระทบ ' . $fu;
+            }
         }
         if ($c['mp']['ready'] && $c['mp']['short']) {
             $staffAuto .= ($staffAuto !== '' ? ' · ' : '') . 'RN เวรนี้ขาดกรอบ ' . count($c['mp']['short']) . ' หน่วย';
@@ -930,29 +1234,48 @@ class Sat extends Controller {
         $v = $c['vuln'];
         $patAuto = $v['ready'] ? 'ทะเบียนกลุ่มเปราะบาง ' . $v['total'] . ' ราย · อยู่ในพื้นที่น้ำท่วม ' . $v['in_zone']
             . ' (ยังไม่อพยพ ' . $v['in_zone_waiting'] . ')' : '';
+        if ($c['shelter']['ready']) {
+            $patAuto = implode(' · ', $c['shelter']['lines']) . ($patAuto !== '' ? ' · ' . $patAuto : '');
+        }
 
-        $L[] = $line('rain');
+        // ฝนรายวันจากสถานีกรมชลประทาน (ไม่ซ้ำถ้าสรุปของการ์ดเป็นข้อความชุดเดียวกันแล้ว)
+        $rainAuto = '';
+        if (is_file('models/rain_model.php')) {
+            require_once 'models/rain_model.php';
+            $rainAuto = Rain_Model::sitrepText($items['rain']['note']);
+        }
+        $L[] = $line('rain', $rainAuto);
         $L[] = $line('water');
         $L[] = $line('road', $roadAuto);
         $L[] = $line('facility', $facAuto);
-        if ($closed) {
+        if ($closed && $items['facility']['src'] !== 'auto') {
             $L[] = '   ปิด/ย้ายจุดบริการ: ' . implode(' · ', $closed);
         }
-        $L[] = $line('ems');
-        if ($rt) {
+        $L[] = $line('ems', implode(' · ', $c['refer']['lines']));
+        if ($rt && $items['ems']['src'] !== 'auto') {
             $L[] = '   เส้นทาง: ' . implode(' · ', $rt);
         }
         $L[] = $line('staff', $staffAuto);
         $L[] = $line('patient', $patAuto);
         $L[] = $line('hosp_site');
-        $L[] = $line('ed_load');
+        $L[] = $line('ed_load', implode(' · ', array_slice($c['his']['lines'], 0, 4)));
         $u = array();
+        $ux = array();
         foreach (array('util_power', 'util_water', 'util_o2', 'util_fuel', 'util_it') as $code) {
             $it = $items[$code];
+            $sys = isset($c['util']['items'][$code]) ? $c['util']['items'][$code]['text'] : '';
+            if ($sys !== '') {
+                $ux[] = $sys;
+            }
+            // สรุปที่เป็นข้อความจากหน้าสาธารณูปโภค แสดงเต็มในบรรทัด "ข้อมูลงานช่าง" แทน (ไม่ตัดกลางคำ)
+            $note = $sys !== '' && strpos($it['note'], $sys) !== false ? trim(str_replace($sys, '', $it['note'])) : $it['note'];
             $u[] = $it['name'] . ' ' . ($it['status'] !== '' ? $col[$it['status']]['emoji'] : '⚪')
-                . ($it['note'] !== '' ? ' (' . mb_substr(preg_replace('/\s+/u', ' ', $it['note']), 0, 60) . ')' : '');
+                . ($note !== '' ? ' (' . mb_substr(preg_replace('/\s+/u', ' ', $note), 0, 60) . ')' : '');
         }
         $L[] = '⚡ ระบบสำคัญ: ' . implode(' · ', $u);
+        if ($ux) {
+            $L[] = '   ข้อมูลงานช่าง: ' . implode(' · ', $ux);
+        }
         $L[] = '';
         if ($in['actions'] !== '') {
             $L[] = '✅ การดำเนินการ: ' . $in['actions'];
@@ -971,5 +1294,358 @@ class Sat extends Controller {
             $L[] = 'รายงานครั้งถัดไป: ' . $in['next'];
         }
         return implode("\n", $L);
+    }
+
+    /* ==================== ดึงประมวล — รวบรวมข้อมูลย่อยของตัวชี้วัดลงประวัติ ==================== */
+
+    private function compileModel() {
+        require_once 'models/sat_compile_model.php';
+        return new Sat_Compile_Model();
+    }
+
+    /** ค่าที่ sat_compile.js ใช้ดึงข้อมูลก่อนประมวล: ลิงก์ชีต/แท็บ + เวลานำเข้าล่าสุด (เฉพาะผู้บันทึกได้ · ไม่มีข้อมูลบุคคล) */
+    private function pullConfig($c) {
+        require_once 'models/sat_compile_model.php';
+        $names = array();
+        foreach (Sat_Model::items() as $k => $it) {
+            $names[$k] = array('name' => $it['name'], 'emoji' => $it['emoji']);
+        }
+        $cfg = array('items' => $names, 'groups' => Sat_Compile_Model::menuGroups(), 'presets' => Sat_Compile_Model::presets(),
+            'sources' => Sat_Compile_Model::pullSources(), 'colors' => Sat_Model::colors(),
+            'util' => null, 'refer' => null, 'shelter' => array(), 'shelterLast' => '');
+        $db = $this->model->db;
+        $hasTable = function ($t) use ($db) {
+            return (bool) $db->selectValue('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :t',
+                array(':t' => $t));
+        };
+        try {
+            require_once 'models/utility_model.php';
+            list($url, $tabs) = $this->utilSource();
+            $cfg['util'] = array('sheet' => $url, 'tabs' => $tabs,
+                'last' => !empty($c['util']['imported_at']) ? flood_thai_date($c['util']['imported_at']) : '');
+        } catch (Exception $e) {
+            error_log('[flood] SAT pull config utility: ' . $e->getMessage());
+        }
+        try {
+            require_once 'models/refer_model.php';
+            list($url, $tabs) = $this->referSource();
+            $last = $hasTable('flood_refer_in') ? $db->selectValue('SELECT MAX(imported_at) FROM flood_refer_in') : null;
+            $cfg['refer'] = array('sheet' => $url, 'tabs' => $tabs, 'last' => $last ? flood_thai_date($last) : '');
+        } catch (Exception $e) {
+            error_log('[flood] SAT pull config refer: ' . $e->getMessage());
+        }
+        try {
+            if ($hasTable('flood_vuln_source') && $db->select("SHOW COLUMNS FROM flood_vuln_source LIKE 'kind'")) {
+                foreach ($db->select("SELECT source_id, name, sheet_url FROM flood_vuln_source WHERE is_active = 1 AND kind = 'shelter'
+                        ORDER BY source_id") as $r) {
+                    $cfg['shelter'][] = array('id' => (int) $r['source_id'], 'name' => (string) $r['name'], 'url' => (string) $r['sheet_url']);
+                }
+            }
+            $cfg['shelterLast'] = !empty($c['shelter']['ready']) ? flood_thai_date($c['shelter']['date'], false) : '';
+        } catch (Exception $e) {
+            error_log('[flood] SAT pull config shelter: ' . $e->getMessage());
+        }
+        return $cfg;
+    }
+
+    /** POST codes = รหัสตัวชี้วัดคั่นด้วย , (หรือ all) · tw = JSON ThaiWater ชุดย่อจากเบราว์เซอร์ → ผลประมวลรายหัวข้อ (ยังไม่บันทึก) */
+    function compile() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $this->ready();
+        $items = Sat_Model::items();
+        $raw = (string) flood_in('codes', '', $_POST);
+        $codes = $raw === 'all' ? array_keys($items) : array_values(array_intersect(array_keys($items), explode(',', $raw)));
+        if (!$codes) {
+            flood_json(array('chk' => false, 'msg' => 'กรุณาเลือกหัวข้อ'));
+        }
+        $tw = isset($_POST['tw']) ? (string) $_POST['tw'] : '';
+        if (strlen($tw) > 500000) {
+            flood_json(array('chk' => false, 'msg' => 'ข้อมูล ThaiWater ใหญ่เกินไป'));
+        }
+        $cm = $this->compileModel();
+        $rows = $cm->compile($this->collect(), $codes, Sat_Compile_Model::cleanTw($tw !== '' ? json_decode($tw, true) : null));
+        flood_json(array('chk' => true, 'rows' => $rows, 'at' => flood_thai_date(date('Y-m-d H:i:s'))));
+    }
+
+    /** POST items = JSON [{code, status, note, data}] → บันทึกลงประวัติตัวชี้วัด (src = auto · การ์ดเปลี่ยนตาม) */
+    function compileSave() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $this->ready();
+        $raw = isset($_POST['items']) ? (string) $_POST['items'] : '';
+        if (strlen($raw) > 600000) {
+            flood_json(array('chk' => false, 'msg' => 'ข้อมูลใหญ่เกินไป'));
+        }
+        $list = json_decode($raw, true);
+        if (!is_array($list) || !$list) {
+            flood_json(array('chk' => false, 'msg' => 'กรุณาเลือกหัวข้อที่จะบันทึก'));
+        }
+        $items = Sat_Model::items();
+        $done = array();
+        foreach ($list as $x) {
+            $code = is_array($x) && isset($x['code']) && is_scalar($x['code']) ? (string) $x['code'] : '';
+            if (!isset($items[$code]) || isset($done[$code])) {
+                continue;
+            }
+            $status = self::color(isset($x['status']) && is_scalar($x['status']) ? $x['status'] : '', true);
+            $note = mb_substr(trim(isset($x['note']) && is_scalar($x['note']) ? (string) $x['note'] : ''), 0, 2000);
+            if ($status === null || ($status === '' && $note === '')) {
+                continue;
+            }
+            $data = isset($x['data']) && is_array($x['data']) ? json_encode($x['data'], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) : null;
+            if ($data !== null && strlen($data) > 20000) {
+                $data = null;
+            }
+            $this->model->saveItem($code, $status, $note, $this->uid(), 'auto', $data);
+            $done[$code] = $items[$code]['name'];
+        }
+        if (!$done) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่มีหัวข้อที่บันทึกได้ (ต้องมีสีหรือสรุปอย่างน้อยหนึ่งอย่าง)'));
+        }
+        flood_json(array('chk' => true, 'msg' => 'บันทึกลงประวัติ ' . count($done) . ' หัวข้อ: ' . implode(' · ', $done)));
+    }
+
+    /* ==================== สาธารณูปโภค (น้ำ · น้ำมันสำรอง · ออกซิเจน · รถเติมน้ำ) ==================== */
+
+    private function utilModel() {
+        require_once 'models/utility_model.php';
+        $um = new Utility_Model();
+        if (!$um->ensureTables()) {
+            if ($this->isPost() || flood_is_ajax()) {
+                flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตารางสาธารณูปโภค และระบบสร้างเองไม่ได้ — ให้ผู้ดูแลรัน php sql/apply_schema.php 21'));
+            }
+            return null;
+        }
+        return $um;
+    }
+
+    /** ลิงก์ชีต + ชื่อแท็บ (ค่าตั้งใน flood_sat_setting) */
+    private function utilSource() {
+        $s = $this->model->ensureTables() ? $this->model->settings() : array();
+        $url = isset($s['util_sheet_url']) && trim((string) $s['util_sheet_url']['sval']) !== '' ? trim($s['util_sheet_url']['sval']) : Utility_Model::DEFAULT_SHEET;
+        $tabs = isset($s['util_sheet_tabs']) ? json_decode((string) $s['util_sheet_tabs']['sval'], true) : null;
+        if (!is_array($tabs) || !$tabs) {
+            $tabs = array_values(Utility_Model::kindNames());
+        }
+        return array($url, $tabs);
+    }
+
+    /** หน้า สาธารณูปโภค (เมนู "สาธารณูปโภค") */
+    function utility() {
+        $this->view->pageMenu = 'flood';
+        $this->view->activeTab = 'utility';
+        $this->view->pageTitle = 'สาธารณูปโภค (น้ำ · ไฟสำรอง · ออกซิเจน)';
+        $um = $this->utilModel();
+        if (!$um) {
+            $this->view->blockedMessage = 'ยังไม่มีตารางสาธารณูปโภค — ให้ผู้ดูแลรัน php sql/apply_schema.php 21';
+            $this->view->rander('flood/no_permission');
+            return;
+        }
+        list($url, $tabs) = $this->utilSource();
+        $edit = $this->canEdit();
+        $sum = $um->summary();
+        if (!$edit && !empty($sum['delivery'])) {
+            $sum['delivery']['trips'] = array();   // ผู้บริหาร/ดูอย่างเดียว เห็นเฉพาะยอดสรุป (ไม่เห็นรายเที่ยว)
+        }
+        $this->view->css[] = 'flood/css/utility.css';
+        if ($edit) {
+            $this->view->js[] = 'flood/js/utility.js';
+        }
+        $this->view->util = $sum;
+        $this->view->utilSheet = $url;
+        $this->view->utilTabs = $tabs;
+        $this->view->utilCanEdit = $edit;
+        $this->view->rander('flood/utility');
+    }
+
+    /** POST sheets = JSON {ชื่อแท็บ: [[ข้อความ,…],…]} จากเบราว์เซอร์ (อ่าน Google Sheet / .xlsx) */
+    function utilityImport() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $um = $this->utilModel();
+        $raw = isset($_POST['sheets']) ? (string) $_POST['sheets'] : '';
+        if (strlen($raw) > 3000000) {
+            flood_json(array('chk' => false, 'msg' => 'ข้อมูลใหญ่เกินไป'));
+        }
+        $sheets = json_decode($raw, true);
+        if (!is_array($sheets) || !$sheets) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่พบข้อมูลชีต'));
+        }
+        $clean = array();
+        foreach ($sheets as $tab => $grid) {
+            if (!is_array($grid) || count($grid) > 5000) {
+                continue;
+            }
+            $rows = array();
+            foreach ($grid as $row) {
+                $cells = array();
+                foreach (array_slice(is_array($row) ? array_values($row) : array(), 0, 40) as $v) {
+                    $cells[] = is_scalar($v) ? mb_substr((string) $v, 0, 500) : '';
+                }
+                $rows[] = $cells;
+            }
+            $clean[mb_substr((string) $tab, 0, 100)] = $rows;
+        }
+        $r = $um->import($clean, $this->uid());
+        flood_json(array('chk' => !empty($r['ok']), 'msg' => $r['msg']));
+    }
+
+    /** POST url, tabs (บรรทัดละแท็บ) */
+    function utilitySheet() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $this->ready();
+        require_once 'models/utility_model.php';
+        $url = trim((string) flood_in('url', '', $_POST));
+        if (!preg_match('#^https://docs\.google\.com/spreadsheets/d/[a-zA-Z0-9_-]{20,}#', $url)) {
+            flood_json(array('chk' => false, 'msg' => 'ลิงก์ต้องเป็น Google Sheet (https://docs.google.com/spreadsheets/d/…)'));
+        }
+        $tabs = array();
+        foreach (preg_split('/\r?\n/', (string) flood_in('tabs', '', $_POST)) as $t) {
+            $t = trim($t);
+            if ($t !== '' && Utility_Model::kindOfTab($t)) {
+                $tabs[] = mb_substr($t, 0, 100);
+            }
+        }
+        if (!$tabs) {
+            flood_json(array('chk' => false, 'msg' => 'ใส่ชื่อแท็บอย่างน้อย 1 แท็บ (ชื่อต้องมีคำว่า ถังพักน้ำ / น้ำมัน / ออกซิเจน / เติมน้ำ)'));
+        }
+        $this->model->setSetting('util_sheet_url', mb_substr($url, 0, 500), $this->uid());
+        $this->model->setSetting('util_sheet_tabs', json_encode(array_values(array_unique($tabs)), JSON_UNESCAPED_UNICODE), $this->uid());
+        flood_json(array('chk' => true, 'msg' => 'บันทึกลิงก์ชีตแล้ว'));
+    }
+
+    /** POST — ตั้งตัวชี้วัด น้ำประปา / ออกซิเจน / เชื้อเพลิง ของ SAT ตามข้อมูลหน้าสาธารณูปโภค (สี + สรุปที่ระบบคำนวณ) */
+    function utilitySync() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $this->ready();
+        $u = $this->utilityNow();
+        $items = Sat_Model::items();
+        $done = array();
+        foreach (array('util_water', 'util_o2', 'util_fuel') as $code) {
+            if (empty($u['items'][$code]) || $u['items'][$code]['status'] === '') {
+                continue;
+            }
+            $this->model->saveItem($code, $u['items'][$code]['status'], $u['items'][$code]['text'], $this->uid());
+            $done[] = $items[$code]['name'];
+        }
+        if (!$done) {
+            flood_json(array('chk' => false, 'msg' => 'ยังไม่มีข้อมูลสาธารณูปโภคที่วัดภายใน 48 ชม. — กด "ดึงจาก Google Sheet" ที่หน้า สาธารณูปโภค ก่อน'));
+        }
+        flood_json(array('chk' => true, 'msg' => 'อัปเดต ' . implode(' · ', $done) . ' จากข้อมูลสาธารณูปโภคแล้ว'));
+    }
+
+    /* ==================== Refer เข้า รพ. ช่วงอุทกภัย ==================== */
+
+    private function referModel() {
+        require_once 'models/refer_model.php';
+        $rm = new Refer_Model();
+        if (!$rm->ensureTables()) {
+            if ($this->isPost() || flood_is_ajax()) {
+                flood_json(array('chk' => false, 'msg' => 'ยังไม่มีตาราง Refer และระบบสร้างเองไม่ได้ — ให้ผู้ดูแลรัน php sql/apply_schema.php 22'));
+            }
+            return null;
+        }
+        return $rm;
+    }
+
+    private function referSource() {
+        $s = $this->model->ensureTables() ? $this->model->settings() : array();
+        $url = isset($s['refer_sheet_url']) && trim((string) $s['refer_sheet_url']['sval']) !== '' ? trim($s['refer_sheet_url']['sval']) : Refer_Model::DEFAULT_SHEET;
+        $tabs = isset($s['refer_sheet_tabs']) ? json_decode((string) $s['refer_sheet_tabs']['sval'], true) : null;
+        if (!is_array($tabs) || !$tabs) {
+            $tabs = array(Refer_Model::DEFAULT_TAB);
+        }
+        return array($url, $tabs);
+    }
+
+    /** หน้า Refer (เมนู "Refer ช่วงอุทกภัย") — รายชื่อผู้ป่วยเห็นเฉพาะเจ้าหน้าที่ศูนย์/ผู้ดูแลระบบ */
+    function refer() {
+        $this->view->pageMenu = 'flood';
+        $this->view->activeTab = 'refer';
+        $this->view->pageTitle = 'Refer เข้า รพ. ช่วงอุทกภัย';
+        $rm = $this->referModel();
+        if (!$rm) {
+            $this->view->blockedMessage = 'ยังไม่มีตาราง Refer — ให้ผู้ดูแลรัน php sql/apply_schema.php 22';
+            $this->view->rander('flood/no_permission');
+            return;
+        }
+        list($url, $tabs) = $this->referSource();
+        $edit = $this->canEdit();
+        $sum = $rm->summary();
+        if (!$edit) {
+            $sum['rows'] = array();
+        }
+        $this->view->css[] = 'flood/css/utility.css';
+        if ($edit) {
+            $this->view->js[] = 'flood/js/utility.js';
+        }
+        $this->view->refer = $sum;
+        $this->view->referSheet = $url;
+        $this->view->referTabs = $tabs;
+        $this->view->referCanEdit = $edit;
+        $this->view->rander('flood/refer');
+    }
+
+    /** POST sheets = JSON {ชื่อแท็บ: grid} */
+    function referImport() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $rm = $this->referModel();
+        $raw = isset($_POST['sheets']) ? (string) $_POST['sheets'] : '';
+        $sheets = strlen($raw) <= 5000000 ? json_decode($raw, true) : null;
+        if (!is_array($sheets) || !$sheets) {
+            flood_json(array('chk' => false, 'msg' => 'ไม่พบข้อมูลชีต'));
+        }
+        $clean = array();
+        foreach ($sheets as $tab => $grid) {
+            if (!is_array($grid) || count($grid) > 10000) {
+                continue;
+            }
+            $rows = array();
+            foreach ($grid as $row) {
+                $cells = array();
+                foreach (array_slice(is_array($row) ? array_values($row) : array(), 0, 40) as $v) {
+                    $cells[] = is_scalar($v) ? mb_substr((string) $v, 0, 500) : '';
+                }
+                $rows[] = $cells;
+            }
+            $clean[mb_substr((string) $tab, 0, 100)] = $rows;
+        }
+        $r = $rm->import($clean, $this->uid());
+        flood_json(array('chk' => !empty($r['ok']), 'msg' => $r['msg']));
+    }
+
+    /** POST url, tabs */
+    function referSheet() {
+        if (!$this->isPost()) {
+            flood_json(array('chk' => false, 'msg' => 'ต้องส่งด้วย POST'), 405);
+        }
+        $this->ready();
+        $url = trim((string) flood_in('url', '', $_POST));
+        if (!preg_match('#^https://docs\.google\.com/spreadsheets/d/[a-zA-Z0-9_-]{20,}#', $url)) {
+            flood_json(array('chk' => false, 'msg' => 'ลิงก์ต้องเป็น Google Sheet (https://docs.google.com/spreadsheets/d/…)'));
+        }
+        $tabs = array();
+        foreach (preg_split('/\r?\n/', (string) flood_in('tabs', '', $_POST)) as $t) {
+            $t = trim($t);
+            if ($t !== '') {
+                $tabs[] = mb_substr($t, 0, 100);
+            }
+        }
+        if (!$tabs) {
+            flood_json(array('chk' => false, 'msg' => 'ใส่ชื่อแท็บที่มีทะเบียน Refer อย่างน้อย 1 แท็บ'));
+        }
+        $this->model->setSetting('refer_sheet_url', mb_substr($url, 0, 500), $this->uid());
+        $this->model->setSetting('refer_sheet_tabs', json_encode(array_values(array_unique($tabs)), JSON_UNESCAPED_UNICODE), $this->uid());
+        flood_json(array('chk' => true, 'msg' => 'บันทึกลิงก์ชีตแล้ว'));
     }
 }
